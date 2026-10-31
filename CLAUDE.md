@@ -20,12 +20,14 @@
 | [データ設計書](docs/data-design.md) | テーブル定義、制約、初期データ、マイグレーション方針（作成予定） |
 | [API 設計書](docs/api-design.md) | REST API の一覧、共通方針、要求・応答の JSON 形式（作成予定） |
 | [フロントエンド設計書](docs/frontend-design.md) | コンポーネント構成、状態の持ち方、API 呼び出しの方針、表示ルール（作成予定） |
-| [技術スタック](docs/tech-stack.md) | 各層で使用する言語・フレームワーク・周辺ツールの選定と理由（作成予定） |
-| [インフラ設計書](docs/infra-design.md) | AWS 上の構成（CloudFront + S3 / ECS Fargate / RDS）、ネットワーク、秘密情報、費用、Terraform の構成（作成予定） |
+| [技術スタック](docs/tech-stack.md) | 各層で使用する言語・フレームワーク・周辺ツールの選定と理由 |
+| [インフラ設計書](docs/infra-design.md) | AWS 上の構成（EC2 + RDS）、ネットワーク、秘密情報、費用、Terraform の構成（作成予定） |
 | [AWS デプロイ手順書](docs/aws-deployment-guide.md) | AWS・Terraform・IaC の解説、AWS CLI の認証設定、構築・更新・休止・再開の手順（作成予定） |
 | [開発フロー](docs/development-workflow.md) | Issue・ブランチ・PR の運用ルール |
 
-構成は `docs/`（要件定義書・設計書）、`mock/`（画面モック）、`backend/`（Spring Boot）、`frontend/`（React + Vite）、`infra/`（AWS の構成の Terraform とデプロイ用スクリプト）、`compose.yaml`（ローカル開発用 PostgreSQL）。現時点で存在するのは `docs/requirements.md`、`docs/functional-requirements.md`、`docs/screen-requirements.md`、`docs/data-requirements.md`、`docs/development-workflow.md`、`mock/` だけで、それ以外は技術スタックを決めたあとに作る。4. 以降のサーバー・品質チェック・デプロイの規則は、タスク管理アプリと同じ構成になる前提で先に置いている。
+構成は `docs/`（要件定義書・設計書）、`mock/`（画面モック）、`backend/`（Ruby on Rails、API モード）、`frontend/`（Next.js）、`infra/`（AWS の構成の Terraform とデプロイ用スクリプト）、`compose.yaml`（ローカル開発用の Rails と MySQL）。技術の選定はタスク管理アプリと異なる（[技術スタック](docs/tech-stack.md)）。現時点で存在するのは `docs/` と `mock/` だけで、`backend/`・`frontend/`・`infra/`・`compose.yaml` はこれから作る。
+
+**注意：** 4. 以降のサーバー起動・ポート・品質チェック・デプロイの規則と、`.claude/` のフック・スキルは、まだタスク管理アプリの技術（Spring Boot / Vite / PostgreSQL / ECS）のままである。技術スタックに合わせた書き換えは別の Issue で行う。それまでは、ポートは技術スタック 6.1（Next.js 3000 / Rails 3001 / MySQL 3306）を正とする。
 
 ---
 
