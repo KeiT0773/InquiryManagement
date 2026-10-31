@@ -2,6 +2,12 @@
 #   例：件名を入力してください、件名は100文字以内で入力してください
 ja:
   activerecord:
+    errors:
+      models:
+        inquiry:
+          attributes:
+            due_on:
+              invalid_date: "は YYYY-MM-DD の形式で指定してください"
     models:
       inquiry: "問い合わせ"
       list: "リスト"
