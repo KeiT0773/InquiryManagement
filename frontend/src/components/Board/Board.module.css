@@ -1,0 +1,28 @@
+/* 画面モック（mock/style.css）の .board・.list・.list-header から。画面の実装で残りを移植する */
+.board {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px 20px;
+  min-height: 0; /* 子要素のスクロールを有効にするため */
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  background: #ebecf0;
+  border-radius: 8px;
+  min-height: 0;
+}
+
+.listName {
+  margin: 0;
+  padding: 12px 14px 8px;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+.message {
+  padding: 16px 20px;
+}

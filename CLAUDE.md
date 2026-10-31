@@ -25,7 +25,7 @@
 | [AWS デプロイ手順書](docs/aws-deployment-guide.md) | AWS・Terraform・IaC の解説、AWS CLI の認証設定、構築・更新・休止・再開の手順（作成予定） |
 | [開発フロー](docs/development-workflow.md) | Issue・ブランチ・PR の運用ルール |
 
-構成は `docs/`（要件定義書・設計書）、`mock/`（画面モック）、`backend/`（Ruby on Rails、API モード）、`frontend/`（Next.js）、`infra/`（AWS の構成の Terraform とデプロイ用スクリプト）、`compose.yaml`（ローカル開発用の Rails と MySQL）。技術の選定はタスク管理アプリと異なる（[技術スタック](docs/tech-stack.md)）。現時点で存在するのは `docs/` と `mock/` だけで、`backend/`・`frontend/`・`infra/`・`compose.yaml` はこれから作る。
+構成は `docs/`（要件定義書・設計書）、`mock/`（画面モック）、`backend/`（Ruby on Rails、API モード）、`frontend/`（Next.js）、`infra/`（AWS の構成の Terraform とデプロイ用スクリプト）、`compose.yaml`（ローカル開発用の Rails と MySQL）。技術の選定はタスク管理アプリと異なる（[技術スタック](docs/tech-stack.md)）。現時点で `infra/` はまだ無く、これから作る。
 
 ---
 
@@ -152,10 +152,11 @@ docker compose exec backend bin/rails db:prepare   # 初回だけ（テーブル
 
 # 2. フロントエンド（別のターミナルで）
 cd frontend
+npm install   # 初回と、package.json が変わったとき
 npm run dev
 ```
 
-画面は http://localhost:3000 。バックエンドの動作確認は http://localhost:3001/up （Rails 標準の死活確認）。詳細は backend/README.md・frontend/README.md（雛形の作成時に作る）を参照。
+画面は http://localhost:3000 。バックエンドの動作確認は http://localhost:3001/up （Rails 標準の死活確認）。詳細は [backend/README.md](backend/README.md)・[frontend/README.md](frontend/README.md) を参照。
 
 ---
 

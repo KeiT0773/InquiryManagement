@@ -5,9 +5,9 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書名 | 問い合わせ管理アプリ 技術スタック |
-| 版数 | 1.5 |
+| 版数 | 1.6 |
 | 作成日 | 2026-10-31 |
-| 最終更新日 | 2026-10-31 |
+| 最終更新日 | 2026-11-01 |
 | 作成者 | KeiT0773 |
 | ステータス | 作成中（レビュー待ち） |
 | 上位文書 | [要件定義書](requirements.md) |
@@ -27,6 +27,7 @@
 | 1.3 | 2026-10-31 | フロントエンド設計書の作成に伴い、4. に API の URL の環境変数名を追記し、フロントエンド設計書への参照をリンクに変更 | KeiT0773 |
 | 1.4 | 2026-10-31 | インフラ設計書の作成に伴い、9. の nginx・Rails の実行・IaC の行と CloudFront と EC2 の間の守り方を、インフラ設計書の決定に合わせて更新 | KeiT0773 |
 | 1.5 | 2026-10-31 | バックエンドの雛形の作成に伴い、Ruby（4.0.9）・Rails（8.1.4）・Puma・mysql2・rack-cors・RuboCop・Brakeman の版数を確定し、bundler-audit と `bin/ci` を追記。ローカルの MySQL の版（8.4.13）を追記 | KeiT0773 |
+| 1.6 | 2026-11-01 | フロントエンドの雛形の作成に伴い、Next.js（16.4.3）・React（19.3.0）・TypeScript・ESLint・Prettier・Vitest の版数と、コード検査の構成を確定 | KeiT0773 |
 
 ---
 
@@ -75,17 +76,17 @@
 
 | 項目 | 選定 | 役割・選定理由 |
 | --- | --- | --- |
-| フレームワーク | Next.js 16 系（App Router） | プロジェクト方針として指定。作成時点の最新は 16.4 系。Next.js の標準である App Router で作る。雛形は `create-next-app` で作成する |
-| UI ライブラリ | React 19 系 | Next.js が使う UI ライブラリ。版数は Next.js の雛形に合わせる |
-| 言語 | TypeScript | `create-next-app` の既定。API がやり取りするデータ（問い合わせ・リスト）の形を型として定義でき、バックエンドとの食い違いを早期に検出できる。版数は雛形に合わせる |
+| フレームワーク | Next.js 16.4.3（App Router） | プロジェクト方針として指定。雛形作成時（2026-10-31）の最新。Next.js の標準である App Router で作る。雛形は `create-next-app`（TypeScript・ESLint・App Router・`src/`、Tailwind CSS なし）で作成した。雛形が既定で有効にする Cache Components（`cacheComponents`）は、サーバーでの描画のための機能で静的書き出しでは使わないため外した |
+| UI ライブラリ | React 19.3.0 | Next.js が使う UI ライブラリ。版数は Next.js の雛形に合わせた |
+| 言語 | TypeScript | `create-next-app` の既定。API がやり取りするデータ（問い合わせ・リスト）の形を型として定義でき、バックエンドとの食い違いを早期に検出できる。版数は雛形に合わせた（5.9 系） |
 | 画面の作り方 | クライアントコンポーネントでボードを描画する | 画面は 1 ページ（ボード画面と、その手前に重ねる問い合わせ詳細）で、データはすべてバックエンドの API から取得する。ドラッグ&ドロップや入力をブラウザで扱うため、ボードはクライアントコンポーネント（`'use client'`）として作る |
 | 本番用のビルド | 静的ファイルに書き出す（`output: 'export'`） | `npm run build` で HTML・JavaScript・CSS を書き出し、EC2 上の nginx で配信する（8. No.1）。Next.js のサーバーを本番で動かさないため、サーバーでだけ動く機能（サーバーでのデータ取得、API ルート、`rewrites` など）は使わない |
 | バックエンドへの接続 | API の URL を環境変数で切り替える | 開発時は `http://localhost:3001`（Rails。CORS で許可。3.）、本番は画面と同じドメインの `/api`（CloudFront 経由。9.）を呼ぶ。環境変数の名前は `NEXT_PUBLIC_API_BASE_URL`（[フロントエンド設計書](frontend-design.md) 2.・9.） |
 | ドラッグ&ドロップ | @hello-pangea/dnd 18 系 | タスク管理アプリと同じ。列の間で問い合わせを動かす用途に特化しており、React 19 に対応している（FR-04, FR-05） |
 | サーバー通信 | fetch API（ブラウザ標準） | 想定データ量（問い合わせ 300 件程度）・利用者数名の規模では追加ライブラリを必要としない |
 | スタイル | CSS（CSS Modules、Next.js 同梱） | 画面モック（`mock/style.css`）をほぼそのまま流用できる。CSS Modules は Next.js が標準で処理するため追加パッケージは不要。UI ライブラリや Tailwind CSS は使わない |
-| コード検査・整形 | `create-next-app` に同梱のコード検査 + Prettier | コード検査は雛形の構成に従う（ESLint など。雛形作成時に確定する）。整形は Prettier を追加する。改行コードはリポジトリ直下の `.gitattributes` と `.editorconfig` で LF に統一する |
-| テスト | Vitest + React Testing Library | Next.js の公式ドキュメントで手順が示されている組み合わせ。DOM の再現には jsdom を使う |
+| コード検査・整形 | ESLint 9 系（`eslint-config-next`）+ Prettier 3 系 | コード検査は雛形の構成（ESLint 9、`eslint-config-next` の `core-web-vitals` と `typescript`）をそのまま使い、警告も失敗として扱う（`--max-warnings=0`）。整形は Prettier を追加した（設定はタスク管理アプリと同じ）。改行コードはリポジトリ直下の `.gitattributes` と `.editorconfig` で LF に統一する |
+| テスト | Vitest 5 系 + React Testing Library 16 系 | Next.js の公式ドキュメントで手順が示されている組み合わせ。DOM の再現には jsdom を使う。`npm run check` で、コード検査 → 整形の確認 → 型検査 → テストをまとめて実行する |
 | パッケージ管理 | npm 11 | Node.js に同梱。追加インストール不要 |
 
 ---
