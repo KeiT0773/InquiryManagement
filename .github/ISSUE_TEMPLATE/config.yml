@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 開発フローの確認
+    url: https://github.com/KeiT0773/InquiryManagement/blob/main/docs/development-workflow.md
+    about: Issue・ブランチ・PR の運用ルールはこちらを参照してください。

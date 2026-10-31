@@ -1,0 +1,28 @@
+# エディタ共通の基本設定。Cursor / VS Code は EditorConfig 拡張により自動で読む。
+# 改行コードは .gitattributes と同じく LF に統一する。
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Java は Spring Initializr の雛形どおりタブ
+[*.java]
+indent_style = tab
+
+# Gradle のビルドファイルも雛形どおりタブ
+[*.gradle]
+indent_style = tab
+
+[*.{ts,tsx,js,css,json,jsonc,md,yml,yaml,html,sql,properties}]
+indent_style = space
+indent_size = 2
+
+# Markdown の行末スペース 2 個は改行の意味を持つため消さない
+[*.md]
+trim_trailing_whitespace = false
+
+[*.bat]
+end_of_line = crlf

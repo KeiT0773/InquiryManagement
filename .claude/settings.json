@@ -1,0 +1,100 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(rm *)",
+      "Bash(rmdir *)",
+      "Bash(mv *)",
+      "Bash(git reset --hard*)",
+      "Bash(git checkout -- *)",
+      "Bash(git checkout .*)",
+      "Bash(git restore *)",
+      "Bash(git clean *)",
+      "Bash(git stash drop*)",
+      "Bash(git stash clear*)",
+      "Bash(git branch -D *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git push origin +*)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(rm *)",
+      "PowerShell(del *)",
+      "PowerShell(rmdir *)",
+      "PowerShell(rd *)",
+      "PowerShell(Move-Item *)",
+      "PowerShell(mv *)",
+      "PowerShell(move *)",
+      "PowerShell(git reset --hard*)",
+      "PowerShell(git checkout -- *)",
+      "PowerShell(git checkout .*)",
+      "PowerShell(git restore *)",
+      "PowerShell(git clean *)",
+      "PowerShell(git stash drop*)",
+      "PowerShell(git stash clear*)",
+      "PowerShell(git branch -D *)",
+      "PowerShell(git push --force*)",
+      "PowerShell(git push -f *)",
+      "PowerShell(git push origin +*)",
+      "Read(~/.aws/credentials)",
+      "Bash(cat ~/.aws/credentials*)",
+      "PowerShell(Get-Content *credentials*)",
+      "Bash(gh repo delete*)",
+      "Bash(gh repo archive*)",
+      "Bash(gh repo rename*)",
+      "Bash(gh api *DELETE*)",
+      "Bash(gh api *delete*)",
+      "Bash(terraform *destroy*-auto-approve*)",
+      "Bash(terraform *-auto-approve*destroy*)",
+      "PowerShell(gh repo delete*)",
+      "PowerShell(gh repo archive*)",
+      "PowerShell(gh repo rename*)",
+      "PowerShell(gh api *DELETE*)",
+      "PowerShell(gh api *delete*)",
+      "PowerShell(terraform *destroy*-auto-approve*)",
+      "PowerShell(terraform *-auto-approve*destroy*)"
+    ],
+    "ask": [
+      "Bash(terraform *apply*)",
+      "Bash(terraform *destroy*)",
+      "Bash(terraform *import*)",
+      "Bash(terraform *state rm*)",
+      "Bash(terraform *state mv*)",
+      "Bash(terraform *force-unlock*)",
+      "Bash(bash infra/scripts/startup.sh*)",
+      "Bash(bash infra/scripts/shutdown.sh*)",
+      "Bash(bash infra/scripts/deploy-backend.sh*)",
+      "Bash(bash infra/scripts/deploy-frontend.sh*)",
+      "Bash(bash infra/scripts/update-allowed-ip.sh*)",
+      "Bash(aws * create-*)",
+      "Bash(aws * delete-*)",
+      "Bash(aws * put-*)",
+      "Bash(aws * update-*)",
+      "Bash(aws * modify-*)",
+      "Bash(aws * start-*)",
+      "Bash(aws * stop-*)",
+      "Bash(aws s3 sync*)",
+      "Bash(aws s3 rm*)",
+      "Bash(aws s3 rb*)",
+      "PowerShell(terraform *apply*)",
+      "PowerShell(terraform *destroy*)",
+      "PowerShell(aws * create-*)",
+      "PowerShell(aws * delete-*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-main-branch.ps1\""
+          },
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-ports.ps1\""
+          }
+        ]
+      }
+    ]
+  }
+}

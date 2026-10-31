@@ -1,0 +1,63 @@
+name: 機能追加
+description: 新しい機能を実装する
+title: "feat: "
+labels: ["type:feat"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        機能を追加するときはこのテンプレートを使います。
+        作業を始める前に、[機能要件書](https://github.com/KeiT0773/InquiryManagement/blob/main/docs/functional-requirements.md) の該当箇所を確認してください。
+
+  # 機能要件書が確定したら、機能 ID の選択式（dropdown）に改める
+  - type: input
+    id: feature-id
+    attributes:
+      label: 関連する機能 ID
+      description: 機能要件書で定義された機能 ID を書きます。該当がなければ「該当なし（新規）」と書き、背景欄に理由を書いてください。
+      placeholder: 例：FR-01 問い合わせ登録
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景・目的
+      description: なぜこの機能が必要なのか、何を解決するのかを書きます。
+      placeholder: |
+        例：問い合わせを登録するたびに手で並べ替えており手間がかかる。登録時に優先度を選べるようにしたい。
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ基準
+      description: 「これができていれば完了」と言える条件を箇条書きで書きます。
+      value: |
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 影響範囲
+      description: 変更が及ぶ画面・API・テーブル・文書など、分かる範囲で書きます。
+      placeholder: |
+        例：SC-01 ボード画面、inquiries テーブル、docs/data-design.md
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 優先度
+      options:
+        - 高
+        - 中
+        - 低
+      default: 1
+    validations:
+      required: true
