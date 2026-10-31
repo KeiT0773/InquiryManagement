@@ -5,136 +5,120 @@ description: このプロジェクトの実装を品質チェック・レビュ�
 
 # 品質レビューの手順
 
-このプロジェクト（Spring Boot 4 / React 19 / PostgreSQL 16 / Terraform + AWS）の実装を、**機械チェック → 文書との突き合わせ → 標準（デファクト）からのずれ** の順で確認する。文書と実装が食い違っていたら **文書を正** として実装を直す（文書どうしが矛盾しているときは 2. の末尾を参照）。
+このプロジェクト（Ruby on Rails 8.1（API モード）/ Next.js 16 / MySQL 8.4 / Terraform + AWS の CloudFront・EC2・RDS）の実装を、**機械チェック → 文書との突き合わせ → 標準（デファクト）からのずれ** の順で確認する。文書と実装が食い違っていたら **文書を正** として実装を直す（文書どうしが矛盾しているときは 2. の末尾を参照）。
 
 ## 1. 機械チェックを回す（Git Bash）
 
 ```bash
-# フロントエンド：lint（warning もエラー）→ Prettier → tsc → Vitest
+# フロントエンド：コード検査 → 整形の確認 → 型検査 → テスト（npm run check に束ねる。雛形の作成時に定義する）
 cd frontend && npm run check
 
-# バックエンド：Checkstyle → javac -Xlint:all -Werror → テスト（PostgreSQL が必要）
-docker compose up -d                 # リポジトリルート
-cd backend && ./gradlew check
+# バックエンド：Rails はコンテナの中で実行する（PC に Ruby は無い）
+docker compose up -d                                   # リポジトリルート。MySQL と Rails
+docker compose exec backend bin/rubocop                # コード検査（rubocop-rails-omakase）
+docker compose exec backend bin/brakeman --no-pager    # セキュリティ検査
+docker compose exec backend bin/rails test             # テスト（MySQL が必要）
 
-# インフラ（infra/ を変えたとき）：書式 → 文法 → 計画（読み取りのみ）→ 関数のテスト → スクリプトの構文
+# インフラ（infra/ を変えたとき）：書式 → 文法 → 計画（読み取りのみ）→ スクリプトの構文
 terraform -chdir=infra/terraform fmt -check -recursive
 terraform -chdir=infra/terraform validate
 terraform -chdir=infra/terraform plan -lock=false     # apply はしない
-node --test infra/terraform/functions/viewer-allowlist.test.mjs
 for f in infra/scripts/*.sh; do bash -n "$f" || echo "NG: $f"; done
 ```
 
+Rails 8.1 の雛形に `bin/ci`（上の 3 つをまとめて実行する仕組み）があれば、`docker compose exec backend bin/ci` で代えてよい。
+
 | チェック | 合格条件 | 落ちたとき |
 | --- | --- | --- |
-| `oxlint --deny-warnings` | 0 件 | ルールを緩めるのではなくコードを直す。`react/exhaustive-deps` の指摘は依存配列の漏れなので必ず直す |
-| `prettier --check` | 全通過 | `npm run format`。改行が原因なら 6. の「改行コード」を確認 |
-| `tsc -b` | 0 件 | TS 6 は `strict` が既定で有効。`any` や `!` で黙らせない |
-| `vitest run` | 全通過 | 新しい振る舞いにはテストを足す。「修正前に落ち、修正後に通る」ことを確認する |
-| Checkstyle | 0 件（`build/reports/checkstyle/`） | 既存コードと衝突するルールならルール側を直してよいが、`NeedBraces` / `UnusedImports` 等の明らかな改善はコードを直す |
-| `-Werror` | コンパイル成功 | 警告の原因を直す。`@SuppressWarnings` は理由をコメントに書く |
+| フロントエンドのコード検査（雛形に同梱のもの） | 0 件（warning もエラー扱い） | ルールを緩めるのではなくコードを直す。React の hooks の依存配列の指摘は必ず直す |
+| Prettier | 全通過 | `npm run format`。改行が原因なら 6. の「改行コード」を確認 |
+| TypeScript の型検査 | 0 件 | `any` や `!` で黙らせない |
+| Vitest | 全通過 | 新しい振る舞いにはテストを足す。「修正前に落ち、修正後に通る」ことを確認する |
+| RuboCop | 0 件 | `bin/rubocop -a` で安全な自動修正だけ当ててから残りを手で直す。規約を変えるなら理由を `.rubocop.yml` にコメントで書く |
+| Brakeman | 警告 0 件 | 誤検知と判断した場合だけ `config/brakeman.ignore` に入れ、理由を `note` に書く |
+| `bin/rails test` | 全通過 | テストを消して通さない。DB の構造が原因なら `bin/rails db:test:prepare` を実行する |
 | `terraform fmt -check` | 差分なし | `terraform -chdir=infra/terraform fmt -recursive` で整形する |
-| `terraform validate` | `Success!` | 未初期化なら `terraform -chdir=infra/terraform init -backend=false`（state に接続せずに文法だけ確認できる） |
-| `terraform plan` | 変更の意図どおり。**意図しない `destroy` / `-/+`（作り直し）が無い**こと。特に `aws_db_instance.main` の作り直しはデータの消失につながる | 原因の行（`# forces replacement`）を特定して直す。休止中は全件が `+`（作成）になるのが正常 |
-| `node --test`（CloudFront Functions） | 全通過 | 関数を変えたらテストも足す。許可・拒否の両方の場合を確かめる |
-| `bash -n`（スクリプト） | エラーなし | 構文を直す。shellcheck は未導入（導入するなら技術スタックに追記） |
+| `terraform validate` | `Success!` | 未初期化なら `terraform -chdir=infra/terraform init -backend=false` |
+| `terraform plan` | 変更の意図どおり。**意図しない `destroy` / `-/+`（作り直し）が無い**こと。特に RDS と EC2 の作り直しはデータ・設定の消失につながる | 原因の行（`# forces replacement`）を特定して直す |
+| `bash -n`（スクリプト） | エラーなし | 構文を直す |
 
-`terraform plan` は AWS の情報を読むため、AWS の認証（`aws sts get-caller-identity`）と `init` 済みであることが必要。読み取りだけなので AWS の実物は変わらないが、`-lock=false` を付けて state 用バケットにロック用のファイルも書かないようにする。tflint は未導入のため任意（導入するなら技術スタックに追記する）。
-
-Docker Desktop が止まっていて DB を起動できないときは、スキル `start-dev-servers` の手順に従う。DB 無しではバックエンドのテストは実行できない（`BackendApplicationTests` も実 DB に接続する）ので、「テストは未実行」と明記して報告する。
+Docker Desktop が止まっていてコンテナを起動できないときは、スキル `start-dev-servers` の手順に従う。DB 無しではバックエンドのテストは実行できないので、「テストは未実行」と明記して報告する。
 
 ## 2. 文書との突き合わせ
 
 `docs/` の各文書と実装を、次の観点で読み比べる。根拠となる章番号を指摘に添える。
 
-> 下表の章番号・規則・名前は、先行プロジェクトのタスク管理アプリの文書に基づく。本プロジェクトの文書（要件定義書〜設計書）が揃ったら、その内容に合わせて書き直す。それまでは観点の例として使う。
-
 | 文書 | 確認する項目 |
 | --- | --- |
-| 機能要件書 3.1 | 優先度順の並べ替え規則：登録・優先度変更は **操作したカードを同じ優先度の末尾** に置く。FR-10（全リスト並べ替え）には「操作したカード」が無い。**移動・削除では並べ替えない**。同じ優先度の中の順序は保つ（安定ソート） |
-| API 設計書 2. | ベースパス `/api`、camelCase、日付 `YYYY-MM-DD`、日時は UTC で末尾 `Z`（マイクロ秒まで）、値が無い項目は `null` で省略しない、区分値は DB の値のまま |
-| API 設計書 2.1・2.2 | エラーは `ProblemDetail`（`title` / `status` / `detail` / `instance`）。入力チェックの 400 は `detail` に日本語を「、」で連結し `errors` を付ける。ステータスの使い分け（201 + `Location`、204 は sort と delete、body の `listId` 不在は 404 ではなく 400） |
-| API 設計書 8.〜12. | 各 API の「処理」の手順どおりか。`title` は **前後の空白を除いてから** 1〜100 文字を判定、`priority` 省略時は `medium`、`description` の空白のみは `null`、移動の `displayOrder` は「自分を除いた並びの位置」で枚数以上なら末尾、削除後は `displayOrder` を詰める |
-| フロントエンド設計書 2. 方針 7〜9 | 失敗文言の場所（取得はボード全体／登録・編集はその入力欄／移動・並べ替えはボード上部／削除はカード詳細のフッター）。**上部の文言は次の操作（移動・編集・登録・削除）が成功したときにも消す**。書き込み後は応答を差し込まず `GET` で取り直す。楽観更新は D&D だけ |
-| フロントエンド設計書 4.2・8.5〜8.8 | コンポーネントの責務と props、追加フォーム・カード詳細・D&D・ツールバーの挙動表（保存の契機、Escape・背景クリックで閉じる、`maxLength`、フォーカスの位置） |
-| 画面要件書 3.・5. | 3 列が横スクロール無しで見える、ツールバーはリストの枠の外、追加フォームは列の最下部、カード表面はタイトル・優先度・期限のみ、削除ボタンはカード詳細の下部 |
-| データ設計書 2.・6. | 空文字は保存せず `NULL`、`display_order` は 0 からの連番で毎回振り直す、振り直しは 1 トランザクション、Flyway の適用済みファイルは編集しない |
-| 技術スタック 3.〜4. | **書かれているライブラリが実際に `build.gradle` / `package.json` に入っているか**（選定済みなのに未導入、またはその逆）。バージョンの記述が実物と合っているか |
-| 要件定義書 10.・11. | 決定事項（削除の確認ダイアログ無し、リスト固定、優先度 3 段階）と受け入れ基準の各行を実装で満たせるか |
-| 要件定義書 7.（費用・アクセス制御・データ保護）、インフラ設計書 | `infra/terraform/` のリソース・規模・ネットワーク・セキュリティグループ・アクセス元の制限が設計書どおりか（5. のチェックリスト）。出力の名前やスクリプトの使い方が手順書（`docs/aws-deployment-guide.md`）と一致しているか |
+| 要件定義書 10.・11. | 決定事項（登録は「未対応」だけ、必須項目は件名・問い合わせ者・問い合わせ内容、削除は確認ダイアログあり、対応者は自由入力で未割当は赤字、受付日は自動で変更不可、同時編集は後勝ち）と、受け入れ基準の各行を実装で満たせるか |
+| 機能要件書 3. | 各機能の振る舞い。FR-01 の登録時の項目と初期値（種別「質問」、優先度「中」）、FR-02 で必須項目を空にしたときは保存しない、FR-04 の 2 通りのステータス変更（詳細画面からは移動先の末尾）、FR-09 の同時利用時の扱い |
+| 機能要件書 3.1 | 並べ替えの規則：優先度（高→中→低）→ 同じ優先度の中は **対応期限の近い順、未設定は後ろ** → 優先度も期限も同じものは元の順序（安定ソート）。登録・優先度変更は **操作した問い合わせを、優先度も期限も同じまとまりの末尾** に置く。**移動・削除・期限の変更では並べ替えない**。FR-01 の対象は「未対応」だけ |
+| 画面要件書 3.・5. | 3 列が横スクロール無しで見え、各列に件数。カード表面は件名・優先度・問い合わせ者（「様」付き）・対応者・種別・対応期限だけ。登録フォームは「未対応」列にだけあり、エラー表示・Esc で閉じる。問い合わせ詳細の項目と操作、削除の確認ダイアログ |
+| データ要件書 2. | 項目・必須/任意・設定者。2.1 の文字数の上限（件名 100、問い合わせ者 50、連絡先 100、問い合わせ内容 2,000、対応メモ 2,000、対応者 50）を **前後の空白を除いてから** 判定、2.2 の空の値の扱い（任意項目の空は「値なし」）、2.3 の個人情報の扱い |
+| 技術スタック 3.〜6. | **書かれている gem・npm パッケージが実際に `Gemfile` / `package.json` に入っているか**（選定済みなのに未導入、またはその逆）。版数の記述が実物と合っているか。ポート（3000 / 3001 / 3306）、CORS の許可元が開発時の `http://localhost:3000` だけか、Next.js が `output: 'export'` で書き出しサーバーでだけ動く機能を使っていないか |
+| データ設計書・API 設計書・フロントエンド設計書・インフラ設計書 | 各設計書の作成時に、確認する項目をこの表に追加する |
 
-文書どうしが矛盾しているとき（例：上位文書は「取得する」、下位文書の決定事項は「呼ばない」）は、**決定事項として明記されている方を正** とし、もう一方の文書を直す。文書を直したら版数・最終更新日・変更履歴の 3 つを更新する（CLAUDE.md 5.）。
+文書どうしが矛盾しているときは、**決定事項として明記されている方を正** とし、もう一方の文書を直す。文書を直したら版数・最終更新日・変更履歴の 3 つを更新する（CLAUDE.md 5.）。
 
-## 3. バックエンドのチェックリスト（Spring Boot の標準）
+## 3. バックエンドのチェックリスト（Rails の標準）
 
-- Controller は HTTP の変換だけ。業務処理とトランザクションは Service、SQL は Repository の派生クエリ（`findByListIdOrderByDisplayOrderAsc` など）
-- Service はクラスに `@Transactional(readOnly = true)`、書き込みメソッドだけ `@Transactional` で上書き
-- 要求・応答は `record`。エンティティを直接返さない。エンティティは setter を公開せず、操作の意味を表すメソッド（`update` / `moveTo` / `assignDisplayOrder`）で変える
-- Bean Validation は要求 record に付け、DB の制約（`CHECK` / `NOT NULL`）と二重にかける。正規化（strip、空白 → `null`）は検証の **前** に済ませる
-- エラー応答は `ProblemDetail` に統一。`spring.mvc.problemdetails.enabled=true` を前提にする
-- `application.properties`：`spring.jpa.hibernate.ddl-auto=none`、`spring.jpa.open-in-view=false`、`server.port` は書かない。`show-sql=true` は開発専用（本番では無効にする）
-- Flyway：適用済みの `V*.sql` は編集しない。定義変更は次の連番で追加
-- 依存を増やすときは技術スタック文書 3. に行を追加する。「必要になるまで追加しない」（技術スタック 2.）
-- テストは `@SpringBootTest` + `MockMvcTester` で API 単位。クラスに `@Transactional` を付けてロールバックさせ、DB にデータを残さない。件数そのものは検証しない
-- 標準から外れていても **理由がコメントに書かれていれば** 許容する（例：`GlobalExceptionHandler` の `@Order(HIGHEST_PRECEDENCE)`、Actuator ではなく自作の `HealthController`）。理由が無ければ指摘する
+- Controller は HTTP の変換（パラメータの受け取り、Strong Parameters、ステータスコード、JSON の組み立て）だけ。業務の処理（並べ替え、表示順の振り直し）はモデルか、`app/models` に置いた処理用のクラス（PORO）にまとめる
+- 複数の行を書き換える処理（表示順の振り直しなど）は `ActiveRecord::Base.transaction` で 1 トランザクションにする
+- 入力チェックはモデルの validations に書き、DB の制約（`null: false`、文字数、外部キー）と二重にかける。前後の空白の除去（`normalizes`）は検証の **前** に済ませる
+- 応答の JSON は、返す項目を明示して組み立てる（`render json: model` でモデルの全列をそのまま返さない）
+- マイグレーション：適用済みのファイルは編集しない。定義の変更は新しいマイグレーションを追加する。`db/schema.rb` はコミットする
+- N+1 問題（一覧の取得でレコードごとに SQL が出る）が無いこと
+- gem を増やすときは技術スタック文書 3. に行を追加する。「必要になるまで追加しない」（技術スタック 2.）
+- テストは Minitest。API ごとに統合テスト（`ActionDispatch::IntegrationTest`）を書く。テストのデータは fixtures を使い、テストごとにロールバックされることを前提にする
+- 標準から外れていても **理由がコメントに書かれていれば** 許容する。理由が無ければ指摘する
 
-## 4. フロントエンドのチェックリスト（React の標準）
+## 4. フロントエンドのチェックリスト（Next.js・React の標準）
 
-> コンポーネント名・フック名（`CardDetail`、`useBoard` など）はタスク管理アプリのもの。フロントエンド設計書が確定したら、本プロジェクトの名前に書き直す。
-
-- 関数コンポーネント + hooks。`React.FC` や class は使わない。`main.tsx` は `createRoot` + `StrictMode`
-- `useEffect` は依存配列を正しく書き（`exhaustive-deps` 0 件）、非同期処理にはクリーンアップ（`cancelled` フラグ）を付ける
-- 一覧の `key` は `id`。`CardDetail` は `key={card.id}` で作り直す
-- 状態は最小限：一覧（`lists` / `cards`）は `useBoard` だけが持ち、入力の下書きは入力側のコンポーネント（`AddCardForm` / `CardDetail`）が持つ。状態管理ライブラリは入れない
-- API 呼び出しは `src/api/` の薄い関数（`getCards` / `createCard` …）経由。コンポーネントやフックから `fetch` を直接呼ばない。エラーは `ApiError` 1 種類
-- `src/types/board.ts` は API 設計書 4. と 1 対 1。項目名・型・`null` 可否を変えない
-- a11y：失敗文言は `role="alert"`、`<label htmlFor>` + `id`（文言をラベルの中に入れない）、モーダルは `role="dialog"` + `aria-modal` + `aria-labelledby`、ボタンは `<button type="button">`
-- スタイルは CSS Modules。グローバルは `index.css`（`*` と `body`）だけ。色や寸法は画面モック（`mock/style.css`）と設計書 8. に合わせる
+- App Router を使い、`next.config` に `output: 'export'` がある。サーバーでだけ動く機能（サーバーでのデータ取得、Route Handlers、`rewrites`、`headers`、画像の最適化など）を使っていない（技術スタック 4.）
+- 操作を扱う部品はクライアントコンポーネント（`'use client'`）にし、必要な範囲だけに付ける
+- 関数コンポーネント + hooks。`useEffect` は依存配列を正しく書き、非同期処理にはクリーンアップ（`cancelled` フラグなど）を付ける
+- 一覧の `key` は `id`。配列の添字を使わない
+- 状態は最小限：一覧はボードの状態を持つ 1 か所（フック）だけが持ち、入力の下書きは入力側の部品が持つ。状態管理ライブラリは入れない
+- API の呼び出しは `src/api/` などの薄い関数を経由し、部品から `fetch` を直接呼ばない。API の URL は環境変数で切り替える（技術スタック 4.）
+- a11y：失敗の文言は `role="alert"`、`<label htmlFor>` + `id`、モーダルは `role="dialog"` + `aria-modal` + `aria-labelledby`、ボタンは `<button type="button">`
+- スタイルは CSS Modules。色や寸法は画面モック（`mock/style.css`）に合わせる
 - テストは Testing Library の役割・名前（`getByRole`、`findByText`）で要素を取り、クラス名や内部状態を見ない。`fetch` は `vi.stubGlobal` で差し替える
-- 設定：`.oxlintrc.json` は `react/rules-of-hooks` と `react/exhaustive-deps` を `error`、`npm run lint` は `--deny-warnings`。Vitest の `passWithNoTests` は付けない
+- 具体的な部品の名前と責務は、フロントエンド設計書の作成後にここへ追記する
 
 ## 5. インフラ（Terraform・スクリプト）のチェックリスト
 
-`infra/` を変えたとき、またはレビューを頼まれたときに確認する。根拠は [docs/infra-design.md](../../../docs/infra-design.md)（以下「設計書」）。
+`infra/` を変えたとき、またはレビューを頼まれたときに確認する。根拠はインフラ設計書（作成後に章番号を追記する）。
 
-**規模と費用（要件定義書 7.「費用」、設計書 2.1）**
-- リソースの規模が設計書 2.1 の上限内か。`db_instance_class` は `validation` で micro だけに制限、ECS の CPU・メモリは変数にせず `locals` で固定している。上限を変える変更は、要件定義書の改訂から行う
-- 有料の機能（RDS の Performance Insights の長期保持・拡張モニタリング、ECS の Container Insights、NAT Gateway、AWS WAF、Secrets Manager）を足していないか。足すなら費用の見積もり（設計書 11.）も更新する
+**規模と費用（要件定義書 7.「費用」）**
+- EC2・RDS の規模が、無料利用枠の対象と同じ規模（インフラ設計書で定める上限）を超えていない
+- 有料の追加機能（RDS の拡張モニタリング、NAT Gateway、AWS WAF、Secrets Manager など）を足していない。足すなら費用の見積もりも更新する
 
 **秘密情報と Git**
-- パスワード・アクセスキーをコードに書いていない。DB パスワードは `random_password` → SSM パラメータストア → タスク定義の `secrets`（設計書 9.1）
-- `infra/.gitignore` で `.terraform/`・`*.tfstate*`・`*.tfvars`（`.example` は除く）・`tfplan*` を除外している。plan ファイルには秘密の値がそのまま入るため、絶対にコミットしない。`git status` にこれらが出ていないか
-- `.terraform.lock.hcl` はコミットする（プロバイダーの版を固定するため）
+- パスワード・アクセスキーをコードや `compose.yaml`・`config/` に書いていない。Rails の `config/master.key` と `.env` はコミットしない
+- `infra/.gitignore` で `.terraform/`・`*.tfstate*`・`*.tfvars`（`.example` は除く）・`tfplan*` を除外している。plan ファイルには秘密の値が入るため、絶対にコミットしない
+- `.terraform.lock.hcl` はコミットする
 
 **書き方の標準**
 - `required_version` とプロバイダーの `version = "~> X.Y"` で版を固定している
-- 共通のタグは `provider` の `default_tags` で付け、リソースごとに書かない。リソース名は `var.project` から作る
-- 入力の検査は `variable` の `validation`、作る前の条件（空のイメージタグ、空の許可リストなど）は `lifecycle.precondition` で書く。エラー文は日本語で、何をすればよいかまで書く
-- データを持つリソース（RDS）が作り直し（`-/+`）にならない。作るときだけ使う値は `ignore_changes` に入れる
-- `force_delete` / `force_destroy` は、休止（`terraform destroy`）で消すことを前提にしたリソースだけに付ける
-- `-target` を普段の手順に使わない（ECR を先に作る初回・再開だけ）
-- 各 `.tf` ファイルの先頭に、役割と設計書の章番号のコメントがある
+- 共通のタグは `provider` の `default_tags` で付ける。リソース名は変数のプロジェクト名から作る
+- 入力の検査は `variable` の `validation`、作る前の条件は `lifecycle.precondition`。エラー文は日本語で、何をすればよいかまで書く
+- データを持つリソース（RDS）や EC2 が作り直し（`-/+`）にならない
 
-**セキュリティ（要件定義書 7.「データ保護」「アクセス制御」、設計書 5.3・6.）**
-- セキュリティグループの受信は送信元を絞っている（`0.0.0.0/0` からの受信を作らない。ALB は CloudFront のプレフィックスリスト、ECS は ALB の SG、RDS は ECS の SG から）
-- `publicly_accessible = false`（RDS）、`internal = true`（ALB）、S3 はパブリックアクセスをすべて禁止し OAC で CloudFront からだけ読める
-- アクセス元の制限（CloudFront Functions、設計書 6.5）が、既定と `/api/*` の**両方**のビヘイビアに付いている。許可リストに IPv4 や広い範囲を入れていない。`is_ipv6_enabled = true`
-- IAM のポリシーは対象を絞っている（タスク実行ロールが読めるのは DB パスワードのパラメータ 1 つだけ。`"Resource": "*"` を足していない）
-
-**文書・スクリプトとの一致**
-- 出力の名前（`outputs.tf`）・リソースの名前と、手順書のコマンド・`infra/scripts/` の使い方が一致しているか（例：`terraform output -raw app_url`、`/ecs/inquirymanagement-backend`、DB の識別子 `inquirymanagement`）
-- スクリプトは Git Bash で動く bash か。AWS の実物を変える前に `confirm` を通り、保存した計画を `assert_no_unexpected_destroy` で検査しているか（設計書 12.3）
-- `/` で始まる引数（CloudFront のパス、ロググループ名）に `MSYS_NO_PATHCONV=1` を付けているか（手順書 1.2）
+**セキュリティ（要件定義書 7.「データ保護」「アクセス制御」）**
+- RDS は `publicly_accessible = false` で、受け付けるのは EC2 のセキュリティグループからだけ
+- EC2 はインターネットから直接呼べない（CloudFront からだけ届く。具体的な方式はインフラ設計書で定める）。SSH の 22 番を全世界に開けていない
+- アクセス元の制限（CloudFront Functions）が、画面と `/api/*` の **両方** に付いている。許可リストに IPv4 や広い範囲を入れていない
+- IAM のポリシーは対象を絞っている（`"Resource": "*"` を安易に使わない）
 
 **適用**
 - レビューで行うのは `plan` まで。`apply` / `destroy` はレビューの中では行わない。適用は PR をマージした後の main で、スキル `deploy-aws` の手順に従う
 
 ## 6. 横断のチェック
 
-- **改行コード**：ルートの `.gitattributes`（`* text=auto eol=lf`）と `.editorconfig` により LF。`git ls-files --eol | grep 'w/crlf'` が `*.bat` 以外を返したら、`sed -i 's/\r$//'` で直すか作業ツリーを取り直す
-- README のコマンドは Git Bash 構文（`./gradlew`、スラッシュ区切り）。PowerShell 構文が残っていたら直す（CLAUDE.md 3.）
+- **改行コード**：ルートの `.gitattributes`（`* text=auto eol=lf`）と `.editorconfig` により LF。`git ls-files --eol | grep 'w/crlf'` が `*.bat` 以外を返したら直す。Rails の `bin/` のスクリプトが CRLF になるとコンテナで動かないので特に注意する
+- README のコマンドは Git Bash 構文。Rails のコマンドは `docker compose exec backend` を付けた形で書く（CLAUDE.md 3.）
 - 文書を変えたら版数・最終更新日・変更履歴（CLAUDE.md 5.）。依存や設定を足したら技術スタック文書と README も更新
-- 新しい npm スクリプトや Gradle タスクを足したら、`frontend/README.md` / `backend/README.md` / ルート `README.md` の表に追記
+- 新しい npm スクリプトや Rails のタスクを足したら、`frontend/README.md` / `backend/README.md` / ルートの `README.md` の表に追記
 
 ## 7. 報告の形式
 
