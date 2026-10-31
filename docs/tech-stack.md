@@ -5,7 +5,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書名 | 問い合わせ管理アプリ 技術スタック |
-| 版数 | 1.6 |
+| 版数 | 1.7 |
 | 作成日 | 2026-10-31 |
 | 最終更新日 | 2026-11-01 |
 | 作成者 | KeiT0773 |
@@ -28,6 +28,7 @@
 | 1.4 | 2026-10-31 | インフラ設計書の作成に伴い、9. の nginx・Rails の実行・IaC の行と CloudFront と EC2 の間の守り方を、インフラ設計書の決定に合わせて更新 | KeiT0773 |
 | 1.5 | 2026-10-31 | バックエンドの雛形の作成に伴い、Ruby（4.0.9）・Rails（8.1.4）・Puma・mysql2・rack-cors・RuboCop・Brakeman の版数を確定し、bundler-audit と `bin/ci` を追記。ローカルの MySQL の版（8.4.13）を追記 | KeiT0773 |
 | 1.6 | 2026-11-01 | フロントエンドの雛形の作成に伴い、Next.js（16.4.3）・React（19.3.0）・TypeScript・ESLint・Prettier・Vitest の版数と、コード検査の構成を確定 | KeiT0773 |
+| 1.7 | 2026-11-01 | AWS の構成（`infra/`）の作成に伴い、9. の nginx（1.28 系）と EC2 上の Docker・Docker Compose（v2.40.3）の版を確定 | KeiT0773 |
 
 ---
 
@@ -185,7 +186,7 @@ flowchart LR
 | アクセス元の制限 | Amazon CloudFront Functions | 要求ごとに CloudFront で動く短い JavaScript で、アクセス元の IP アドレスが自宅のネットワーク以外なら 403 を返す（要件定義書 7.「アクセス制御」、8. No.4）。タスク管理アプリと同じ方法で、月 200 万回まで無料 |
 | アプリケーションの実行 | Amazon EC2（1 台） | プロジェクト方針として指定。フロントエンド（Next.js）とバックエンド（Rails）を同じサーバーで動かす。タスク管理アプリのサーバーレス構成（S3・Fargate）と違い、OS の管理（更新・プロセスの管理）を自分で行う構成を学ぶ。インスタンスの種類は、無料利用枠の対象と同じ規模（`t4g.micro` / `t3.micro` など）を上限とする（要件定義書 7.「費用」） |
 | データベース | Amazon RDS for MySQL 8.4 系（`db.t4g.micro`） | ローカル（5.）と同じ MySQL 8.4 系。インストール・パッチ・バックアップを AWS に任せる。タスク管理アプリと同じく、無料利用枠の対象と同じ規模を上限とする |
-| Web サーバー | nginx | EC2 上で、Next.js が書き出した画面の静的ファイルを返し、`/api/*` を Rails へ転送する（8. No.1）。nginx も Docker で動かす（[インフラ設計書](infra-design.md) 7.3） |
-| Rails の実行 | Docker（EC2 上） | ローカルと同じ Docker イメージで Rails（Puma）を動かす（8. No.5）。イメージは開発者の PC で作って Amazon ECR に置き、EC2 上で Docker Compose と systemd で起動・再起動を管理する（[インフラ設計書](infra-design.md) 7.） |
+| Web サーバー | nginx 1.28 系（公式イメージ `nginx:1.28-alpine`） | EC2 上で、Next.js が書き出した画面の静的ファイルを返し、`/api/*` を Rails へ転送する（8. No.1）。nginx も Docker で動かす（[インフラ設計書](infra-design.md) 7.3）。版は構築時（2026-11-01）の安定版の系列 |
+| Rails の実行 | Docker（EC2 上） | ローカルと同じ Docker イメージで Rails（Puma）を動かす（8. No.5）。イメージは開発者の PC で作って Amazon ECR に置き、EC2 上で Docker Compose と systemd で起動・再起動を管理する（[インフラ設計書](infra-design.md) 7.）。EC2 の OS は Amazon Linux 2023、Docker はその標準のパッケージ、Docker Compose は v2.40.3（v2 系の最後の版。OS の Docker Engine 25 系との組み合わせで実績が長いため。v5 系は使わない） |
 | IaC | Terraform | タスク管理アプリと同じ。すべての AWS リソースをコードで定義する。1.10 以上（[インフラ設計書](infra-design.md) 12.2） |
 | CLI | AWS CLI v2 | タスク管理アプリと同じ。認証の確認や、Terraform の外側の操作を行う |

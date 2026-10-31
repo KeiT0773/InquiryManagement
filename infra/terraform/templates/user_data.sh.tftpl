@@ -1,0 +1,63 @@
+#!/bin/bash
+# EC2 の初回起動時に 1 回だけ実行される設定（インフラ設計書 7.2）。Terraform が値を埋める。
+# 秘密の値はここに書かない（start.sh が起動のたびに SSM パラメータストアから読む。9.）。
+# 実行の記録は EC2 の /var/log/cloud-init-output.log に残る。
+set -euo pipefail
+
+# --- 1. Docker と Docker Compose のプラグイン ---
+dnf install -y docker
+systemctl enable --now docker
+
+# Amazon Linux 2023 のパッケージに Compose のプラグインが無いため、公式の配布物を入れる。
+# 版とチェックサムを固定し、壊れた・すり替えられたファイルを入れない。
+# v2 系の最後の版にする（Amazon Linux 2023 の Docker Engine 25 系との組み合わせで実績が長いため）
+COMPOSE_VERSION=v2.40.3
+COMPOSE_SHA256=dba9d98e1ba5bfe11d88c99b9bd32fc4a0624a30fafe68eea34d61a3e42fd372
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL -o /tmp/docker-compose \
+  "https://github.com/docker/compose/releases/download/$${COMPOSE_VERSION}/docker-compose-linux-x86_64"
+echo "$${COMPOSE_SHA256}  /tmp/docker-compose" | sha256sum -c -
+install -m 0755 /tmp/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+
+# --- 2. スワップ（1 GB のメモリで nginx・Rails・Docker を動かすため。7.1） ---
+if [ ! -f /swapfile ]; then
+  dd if=/dev/zero of=/swapfile bs=1M count=1024
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+# --- 3. 本番の compose.yaml と start.sh ---
+mkdir -p ${app_dir}
+chmod 700 ${app_dir}
+
+cat > ${app_dir}/compose.yaml <<'COMPOSE_YAML'
+${compose_yaml}
+COMPOSE_YAML
+
+cat > ${app_dir}/start.sh <<'START_SH'
+${start_sh}
+START_SH
+chmod 700 ${app_dir}/start.sh
+
+# --- 4・5. 起動時に start.sh を実行するサービス ---
+cat > /etc/systemd/system/${project}.service <<'UNIT'
+[Unit]
+Description=${project} (docker compose)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=${app_dir}/start.sh
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now ${project}.service

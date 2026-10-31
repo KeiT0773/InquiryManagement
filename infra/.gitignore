@@ -1,0 +1,18 @@
+# Terraform がダウンロードしたプロバイダー（init で作られる）
+.terraform/
+
+# state は S3 に置く（backend.tf）。手元に残った複製も含めない
+*.tfstate
+*.tfstate.*
+
+# 実際の入力値（自宅のネットワーク番号を含む）。記入例（.example）だけをコミットする
+*.tfvars
+!*.tfvars.example
+
+# 保存した計画（plan -out。tfplan、tfplan-preview、tfplan-destroy など）とクラッシュログ。
+# 計画の中には DB パスワードなどの秘密の値がそのまま入るため、絶対にコミットしない（インフラ設計書 9.）。
+tfplan*
+*.tfplan
+crash.log
+
+# プロバイダーのバージョンの固定（.terraform.lock.hcl）はコミットする

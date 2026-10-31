@@ -1,0 +1,38 @@
+# 本番の Docker Compose の定義（インフラ設計書 7.3）。Terraform が値を埋めて EC2 の ${app_dir} に置く。
+# $${...} の値（イメージのタグと秘密の値）は、start.sh が SSM パラメータストアから読んで .env に書く。
+# ログは Docker の awslogs ログドライバーで CloudWatch Logs に送る（logs.tf）。
+
+services:
+  # nginx + 画面の静的ファイル。/api/* を backend へ転送し、確認用ヘッダーの無い要求を 403 にする（6.2）
+  web:
+    image: ${ecr_registry}/${project}-web:$${WEB_IMAGE_TAG}
+    ports:
+      - "80:80"
+    environment:
+      ORIGIN_VERIFY: $${ORIGIN_VERIFY}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${region}
+        awslogs-group: /${project}/web
+        awslogs-stream-prefix: web
+
+  # Rails（Puma、3000）。EC2 の外には公開しない。起動時に bin/rails db:prepare でテーブルを作る・更新する
+  backend:
+    image: ${ecr_registry}/${project}-backend:$${BACKEND_IMAGE_TAG}
+    environment:
+      RAILS_ENV: production
+      DATABASE_HOST: ${db_host}
+      DATABASE_USERNAME: ${db_username}
+      DATABASE_PASSWORD: $${DATABASE_PASSWORD}
+      SECRET_KEY_BASE: $${SECRET_KEY_BASE}
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${region}
+        awslogs-group: /${project}/backend
+        awslogs-stream-prefix: backend

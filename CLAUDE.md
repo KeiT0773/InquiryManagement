@@ -22,10 +22,10 @@
 | [フロントエンド設計書](docs/frontend-design.md) | コンポーネント構成、状態の持ち方、API 呼び出しの方針、表示ルール |
 | [技術スタック](docs/tech-stack.md) | 各層で使用する言語・フレームワーク・周辺ツールの選定と理由 |
 | [インフラ設計書](docs/infra-design.md) | AWS 上の構成（CloudFront + EC2 + RDS）、ネットワーク、秘密情報、費用、Terraform の構成 |
-| [AWS デプロイ手順書](docs/aws-deployment-guide.md) | AWS・Terraform・IaC の解説、AWS CLI の認証設定、構築・更新・休止・再開の手順（作成予定） |
+| [AWS デプロイ手順書](docs/aws-deployment-guide.md) | AWS・Terraform・IaC の解説、AWS CLI の認証設定、構築・更新・休止・再開の手順 |
 | [開発フロー](docs/development-workflow.md) | Issue・ブランチ・PR の運用ルール |
 
-構成は `docs/`（要件定義書・設計書）、`mock/`（画面モック）、`backend/`（Ruby on Rails、API モード）、`frontend/`（Next.js）、`infra/`（AWS の構成の Terraform とデプロイ用スクリプト）、`compose.yaml`（ローカル開発用の Rails と MySQL）。技術の選定はタスク管理アプリと異なる（[技術スタック](docs/tech-stack.md)）。現時点で `infra/` はまだ無く、これから作る。
+構成は `docs/`（要件定義書・設計書）、`mock/`（画面モック）、`backend/`（Ruby on Rails、API モード）、`frontend/`（Next.js）、`infra/`（AWS の構成の Terraform とデプロイ用スクリプト）、`compose.yaml`（ローカル開発用の Rails と MySQL）。技術の選定はタスク管理アプリと異なる（[技術スタック](docs/tech-stack.md)）。
 
 ---
 
@@ -204,7 +204,7 @@ npm run dev
 
 ## 8. AWS へのデプロイ
 
-AWS への構築・更新・休止・再開と、`infra/` の Terraform・スクリプトの実行は、スキル `deploy-aws`（[.claude/skills/deploy-aws/SKILL.md](.claude/skills/deploy-aws/SKILL.md)）に従う。具体的な手順は、`infra/` の Terraform とスクリプトを作るときにスキルへ書き足す。
+AWS への構築・更新・休止・再開と、`infra/` の Terraform・スクリプトの実行は、スキル `deploy-aws`（[.claude/skills/deploy-aws/SKILL.md](.claude/skills/deploy-aws/SKILL.md)）に従う。人向けの手順は [AWS デプロイ手順書](docs/aws-deployment-guide.md) にある。
 
 - AWS の実物を変える操作は、内容（計画の集計など）を示して利用者の承認を得てから行う。スクリプトの `--yes` は承認後にだけ付ける
 - 撤去（`terraform destroy`、`aws ... delete-*`、`aws ec2 terminate-instances` など）は、消えるものを示し、その会話の中で利用者が明示的に承認してから実行する。前の承認は使い回さず、`-auto-approve` は付けない
