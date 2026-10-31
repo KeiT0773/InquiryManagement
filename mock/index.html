@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>問い合わせ管理ボード（モック）</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ===== SC-01 ボード画面 ===== -->
+  <header class="app-header">
+    <h1>問い合わせ管理ボード</h1>
+    <span class="mock-note">モック版：データはブラウザを再読み込みすると初期状態に戻ります</span>
+  </header>
+
+  <!-- ツールバー：全リスト共通の操作を置く。リストの枠の外 -->
+  <div class="toolbar">
+    <button type="button" class="btn-sort" id="btn-sort">優先度順に並べ替え</button>
+    <span class="toolbar-note">3つのステータスすべてを 高 → 中 → 低 の順に並べ直します（同じ優先度の中の順序は変わりません）</span>
+  </div>
+
+  <main class="board" id="board">
+    <!-- 3つのステータス（未対応 / 対応中 / 完了）は JavaScript で生成する -->
+  </main>
+
+  <!-- ===== SC-02 問い合わせ詳細（ボード画面の手前に重ねて表示） ===== -->
+  <div class="modal-overlay" id="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <h2 id="modal-title">問い合わせ詳細</h2>
+        <button type="button" class="btn-close" id="btn-close">閉じる</button>
+      </div>
+
+      <div class="modal-body">
+        <label class="field">
+          <span class="field-label">件名</span>
+          <input type="text" id="detail-title" maxlength="100">
+        </label>
+
+        <div class="field-row">
+          <label class="field field-grow">
+            <span class="field-label">問い合わせ者</span>
+            <input type="text" id="detail-customer" maxlength="50" placeholder="例：山田 太郎（必須）">
+          </label>
+
+          <label class="field field-grow">
+            <span class="field-label">連絡先</span>
+            <input type="text" id="detail-contact" maxlength="100" placeholder="メールアドレスまたは電話番号">
+          </label>
+        </div>
+
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">種別</span>
+            <select id="detail-category">
+              <option value="question">質問</option>
+              <option value="bug">不具合</option>
+              <option value="request">要望</option>
+              <option value="other">その他</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">ステータス</span>
+            <select id="detail-status">
+              <!-- 選択肢は JavaScript で LISTS から生成する -->
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">対応期限</span>
+            <input type="date" id="detail-due">
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">問い合わせ内容</span>
+          <textarea id="detail-description" rows="4" placeholder="問い合わせの内容を入力（必須）"></textarea>
+        </label>
+
+        <label class="field">
+          <span class="field-label">対応メモ</span>
+          <textarea id="detail-memo" rows="3" placeholder="回答内容や対応経過を入力（任意）"></textarea>
+        </label>
+
+        <div class="field-row">
+          <label class="field field-grow">
+            <span class="field-label">対応者</span>
+            <input type="text" id="detail-assignee" maxlength="50" placeholder="未割当">
+          </label>
+
+          <fieldset class="field field-grow">
+            <legend class="field-label">優先度</legend>
+            <div class="priority-options">
+              <label><input type="radio" name="priority" value="high"> <span class="badge badge-high">高</span></label>
+              <label><input type="radio" name="priority" value="medium"> <span class="badge badge-medium">中</span></label>
+              <label><input type="radio" name="priority" value="low"> <span class="badge badge-low">低</span></label>
+            </div>
+          </fieldset>
+        </div>
+
+        <p class="detail-received" id="detail-received"></p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-delete" id="btn-delete">問い合わせを削除</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

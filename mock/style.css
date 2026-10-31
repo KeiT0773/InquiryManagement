@@ -1,0 +1,462 @@
+/* ============================================================
+   問い合わせ管理ボード モック用スタイル
+   色・寸法は画面イメージの認識合わせ用の仮のもの
+   ============================================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Hiragino Sans", "Meiryo", sans-serif;
+  background: #f4f5f7;
+  color: #172b4d;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- ヘッダー ---------- */
+.app-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 12px 20px;
+  background: #0052cc;
+  color: #fff;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.mock-note {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* ---------- ツールバー（全リスト共通の操作） ---------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px 0;
+}
+
+.btn-sort {
+  padding: 6px 14px;
+  border: 1px solid #0052cc;
+  border-radius: 4px;
+  background: #fff;
+  color: #0052cc;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-sort:hover {
+  background: #deebff;
+}
+
+.toolbar-note {
+  font-size: 12px;
+  color: #5e6c84;
+}
+
+/* ---------- ボード（3ステータスを横並び） ---------- */
+.board {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px 20px;
+  min-height: 0; /* 子要素のスクロールを有効にするため */
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  background: #ebecf0;
+  border-radius: 8px;
+  min-height: 0;
+}
+
+.list-header {
+  padding: 12px 14px 8px;
+  border-top: 4px solid transparent;
+  border-radius: 8px 8px 0 0;
+  font-weight: bold;
+  font-size: 15px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ステータスごとの見出しの色 */
+.list[data-list-id="open"]    .list-header { border-top-color: #de350b; }
+.list[data-list-id="working"] .list-header { border-top-color: #0052cc; }
+.list[data-list-id="closed"]  .list-header { border-top-color: #36b37e; }
+
+.list-count {
+  font-weight: normal;
+  color: #5e6c84;
+  font-size: 13px;
+}
+
+.card-container {
+  flex: 1;
+  padding: 0 10px;
+  overflow-y: auto; /* カードが多いときはリスト内だけスクロール */
+  min-height: 40px;
+}
+
+/* ---------- カード ---------- */
+.card {
+  background: #fff;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 2px rgba(9, 30, 66, 0.25);
+  cursor: grab;
+}
+
+.card:hover {
+  background: #f9fafc;
+}
+
+.card.dragging {
+  opacity: 0.4;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title {
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.card-people {
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #42526e;
+}
+
+.card-customer {
+  word-break: break-all;
+}
+
+.card-assignee {
+  flex-shrink: 0;
+}
+
+.card-assignee.unassigned {
+  color: #de350b;
+  font-weight: bold;
+}
+
+.card-meta {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #5e6c84;
+}
+
+.card-due {
+  min-height: 16px; /* 期限なしでも行の高さを確保（空欄表示） */
+}
+
+.card-due.overdue {
+  color: #de350b;
+  font-weight: bold;
+}
+
+/* ドラッグ中の挿入位置プレースホルダー */
+.placeholder {
+  height: 52px;
+  margin-bottom: 8px;
+  border: 2px dashed #0052cc;
+  border-radius: 6px;
+  background: rgba(0, 82, 204, 0.08);
+}
+
+/* ---------- 優先度バッジ ---------- */
+.badge {
+  display: inline-block;
+  min-width: 28px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.badge-high   { background: #de350b; }
+.badge-medium { background: #ff991f; }
+.badge-low    { background: #36b37e; }
+
+/* ---------- 種別タグ ---------- */
+.category {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  background: #dfe1e6;
+  color: #42526e;
+  flex-shrink: 0;
+}
+
+.category-question { background: #deebff; color: #0747a6; }
+.category-bug      { background: #ffebe6; color: #bf2600; }
+.category-request  { background: #eae6ff; color: #403294; }
+.category-other    { background: #dfe1e6; color: #42526e; }
+
+/* ---------- 問い合わせ登録 ---------- */
+.add-area {
+  padding: 8px 10px 10px;
+}
+
+.btn-add {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #5e6c84;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-add:hover {
+  background: #dfe1e6;
+  color: #172b4d;
+}
+
+.add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.add-form input[type="text"],
+.add-form select {
+  padding: 8px 10px;
+  border: 2px solid #0052cc;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+/* input[type="text"] の指定より優先させるため要素名を付ける */
+.add-form input.input-sub,
+.add-form select.input-sub {
+  border-width: 1px;
+  border-color: #c1c7d0;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+.add-form textarea {
+  padding: 6px 10px;
+  border: 1px solid #c1c7d0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+/* 必須項目が未入力のときの枠とメッセージ */
+.add-form input.input-error,
+.add-form textarea.input-error {
+  border-color: #de350b;
+  background: #fff4f2;
+}
+
+.form-error {
+  margin: 0;
+  font-size: 12px;
+  color: #de350b;
+}
+
+.form-error:empty {
+  display: none;
+}
+
+/* 追加フォーム内の優先度選択（詳細画面のものより詰めて表示） */
+.priority-options-compact {
+  padding: 2px 4px 0;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.add-form-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-primary {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 4px;
+  background: #0052cc;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #5e6c84;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ---------- SC-02 問い合わせ詳細（モーダル） ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 30, 66, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal {
+  width: 600px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  max-width: calc(100% - 32px);
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(9, 30, 66, 0.35);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid #dfe1e6;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.btn-close {
+  padding: 6px 12px;
+  border: 1px solid #c1c7d0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: bold;
+  color: #5e6c84;
+}
+
+.field input[type="text"],
+.field input[type="date"],
+.field select,
+.field textarea {
+  padding: 8px 10px;
+  border: 1px solid #c1c7d0;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field-row {
+  display: flex;
+  gap: 16px;
+}
+
+.field-grow {
+  flex: 1;
+}
+
+.detail-received {
+  margin: 0;
+  font-size: 12px;
+  color: #5e6c84;
+}
+
+.priority-options {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding-top: 6px;
+}
+
+.priority-options label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 20px 16px;
+  border-top: 1px solid #dfe1e6;
+}
+
+.btn-delete {
+  padding: 8px 14px;
+  border: 1px solid #de350b;
+  border-radius: 4px;
+  background: #fff;
+  color: #de350b;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background: #de350b;
+  color: #fff;
+}
