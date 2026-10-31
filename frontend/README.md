@@ -18,22 +18,22 @@ npm run dev       # http://localhost:3000
 
 ## よく使うコマンド
 
-| コマンド | 内容 |
-| --- | --- |
-| `npm run check` | 機械チェックを一括で実行（コード検査 → 整形の確認 → 型検査 → テスト） |
-| `npm run lint` | コード検査（ESLint。警告も失敗にする） |
-| `npm run format` | 整形（Prettier） |
-| `npm run typecheck` | 型検査（`next typegen` で Next.js の型を作ってから `tsc`） |
-| `npm test` | テスト（Vitest） |
-| `npm run build` | 本番用の静的ファイルを `out/` に書き出す |
+| コマンド            | 内容                                                                  |
+| ------------------- | --------------------------------------------------------------------- |
+| `npm run check`     | 機械チェックを一括で実行（コード検査 → 整形の確認 → 型検査 → テスト） |
+| `npm run lint`      | コード検査（ESLint。警告も失敗にする）                                |
+| `npm run format`    | 整形（Prettier）                                                      |
+| `npm run typecheck` | 型検査（`next typegen` で Next.js の型を作ってから `tsc`）            |
+| `npm test`          | テスト（Vitest）                                                      |
+| `npm run build`     | 本番用の静的ファイルを `out/` に書き出す                              |
 
 ## API の接続先
 
 API の URL の先頭は環境変数 `NEXT_PUBLIC_API_BASE_URL` で切り替える（[フロントエンド設計書](../docs/frontend-design.md) 9.）。
 
-| ファイル | 値 | 使われるとき |
-| --- | --- | --- |
+| ファイル           | 値                      | 使われるとき                                                    |
+| ------------------ | ----------------------- | --------------------------------------------------------------- |
 | `.env.development` | `http://localhost:3001` | `npm run dev`。Rails を直接呼ぶ（Rails が CORS で許可している） |
-| `.env.production` | 空 | `npm run build`。画面と同じドメインの `/api` を呼ぶ |
+| `.env.production`  | 空                      | `npm run build`。画面と同じドメインの `/api` を呼ぶ             |
 
 値はビルド時にコードへ埋め込まれる。秘密の値ではないため、どちらのファイルもコミットする。

@@ -1,0 +1,28 @@
+/* 画面モック（mock/style.css）の .category から */
+.tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.question {
+  background: #deebff;
+  color: #0747a6;
+}
+
+.bug {
+  background: #ffebe6;
+  color: #bf2600;
+}
+
+.request {
+  background: #eae6ff;
+  color: #403294;
+}
+
+.other {
+  background: #dfe1e6;
+  color: #42526e;
+}

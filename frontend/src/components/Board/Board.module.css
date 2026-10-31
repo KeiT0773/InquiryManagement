@@ -1,4 +1,4 @@
-/* 画面モック（mock/style.css）の .board・.list・.list-header から。画面の実装で残りを移植する */
+/* 画面モック（mock/style.css）の .board から */
 .board {
   flex: 1;
   display: grid;
@@ -8,21 +8,30 @@
   min-height: 0; /* 子要素のスクロールを有効にするため */
 }
 
-.list {
-  display: flex;
-  flex-direction: column;
-  background: #ebecf0;
-  border-radius: 8px;
-  min-height: 0;
-}
-
-.listName {
-  margin: 0;
-  padding: 12px 14px 8px;
-  font-weight: bold;
-  font-size: 15px;
-}
-
 .message {
   padding: 16px 20px;
+}
+
+/* 移動・並べ替え・詳細を開く操作の失敗の文言（フロントエンド設計書 2. 方針 7） */
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 20px 0;
+  padding: 8px 12px;
+  border: 1px solid #de350b;
+  border-radius: 4px;
+  background: #fff4f2;
+  color: #de350b;
+  font-size: 13px;
+}
+
+.noticeClose {
+  padding: 4px 10px;
+  border: 1px solid #de350b;
+  border-radius: 4px;
+  background: #fff;
+  color: #de350b;
+  cursor: pointer;
 }

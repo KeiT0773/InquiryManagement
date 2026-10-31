@@ -1,0 +1,14 @@
+/* 画面モック（mock/style.css）の .app-header から */
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 12px 20px;
+  background: #0052cc;
+  color: #fff;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+}
