@@ -32,16 +32,17 @@ let inquiries = [
   { id: 3, listId: 'open',    title: 'CSV出力に項目を追加してほしい', customer: '鈴木 一郎',   contact: 'suzuki@example.com',   category: 'request',  assignee: '',       description: '問い合わせ一覧の CSV に受付日を含めてほしい。',  memo: '',                               received: dateFromToday(0),  due: '',                priority: 'low' },
   { id: 4, listId: 'working', title: 'プラン変更の手続き',           customer: '高橋 美咲',   contact: 'takahashi@example.com', category: 'question', assignee: '小林',   description: '年契約から月契約に切り替えたい。',               memo: '契約担当に確認中。',             received: dateFromToday(-3), due: dateFromToday(3),  priority: 'medium' },
   { id: 5, listId: 'working', title: '画面が真っ白になる',           customer: '田中 健',     contact: 'tanaka@example.com',   category: 'bug',      assignee: '中村',   description: 'Safari で一覧画面を開くと何も表示されない。',     memo: '再現手順を開発チームに共有済み。', received: dateFromToday(-2), due: dateFromToday(0),  priority: 'high' },
+  { id: 8, listId: 'working', title: '領収書の宛名を変更したい',     customer: '小川 直子',   contact: 'ogawa@example.com',    category: 'question', assignee: '中村',   description: '領収書の宛名を会社名に変更して再発行してほしい。', memo: '経理に確認中。',                 received: dateFromToday(-2), due: dateFromToday(1),  priority: 'medium' },
   { id: 6, listId: 'closed',  title: '営業時間の確認',               customer: '伊藤 さくら', contact: '090-0000-1111',        category: 'other',    assignee: '中村',   description: '電話窓口の営業時間を教えてほしい。',             memo: '平日 9:00〜18:00 と回答。',      received: dateFromToday(-6), due: '',                priority: 'low' },
   { id: 7, listId: 'closed',  title: '退会方法を知りたい',           customer: '渡辺 誠',     contact: 'watanabe@example.com', category: 'question', assignee: '小林',   description: 'アカウントの退会手順が分からない。',             memo: 'ヘルプページの URL を案内。',    received: dateFromToday(-5), due: dateFromToday(-3), priority: 'medium' },
 ];
 
 // 問い合わせを登録できるのは「未対応」だけ（新しい問い合わせは必ず未対応から始まる）
 const REGISTER_LIST_ID = 'open';
-// 「対応中」はあえて優先度順になっていない（中が高より上）。
+// 「対応中」はあえて並べ替えの規則どおりになっていない（中が高より上、同じ中の中で期限の遠い方が上）。
 // ツールバーの「優先度順に並べ替え」を押すと変化が分かる。
 
-let nextId = 8;
+let nextId = 9;
 
 // ---------- 日付ユーティリティ ----------
 function toDateString(d) {
@@ -66,18 +67,29 @@ function isOverdue(inquiry) {
   return inquiry.due !== '' && inquiry.due < today() && inquiry.listId !== 'closed';
 }
 
-// ---------- 優先度順の並べ替え ----------
-// 指定リストの問い合わせを 高→中→低 の順に並べ直す。
-// 同じ優先度どうしは元の順序を保つ（Array.sort は安定ソート）ため、
-// 末尾に置いてから呼べば「同じ優先度グループの末尾」に入る。
+// ---------- 優先度順の並べ替え（機能要件書 3.1） ----------
+// 並び順の比較：優先度（高→中→低）→ 対応期限の近い順。対応期限が未設定のものは同じ優先度の最後。
+// 対応期限は "YYYY-MM-DD" の文字列なので、文字列の比較で日付の前後が分かる（期限切れは日付が早いため上）。
+function compareForSort(a, b) {
+  const byPriority = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+  if (byPriority !== 0) return byPriority;
+  if (a.due === b.due) return 0; // 未設定どうしも含む
+  if (a.due === '') return 1;
+  if (b.due === '') return -1;
+  return a.due < b.due ? -1 : 1;
+}
+
+// 指定リストの問い合わせを compareForSort の順に並べ直す。
+// 優先度も対応期限も同じものどうしは元の順序を保つ（Array.sort は安定ソート）ため、
+// 末尾に置いてから呼べば「優先度も対応期限も同じまとまりの末尾」に入る。
 function sortListByPriority(listId) {
   const target = inquiries.filter((q) => q.listId === listId);
   const rest = inquiries.filter((q) => q.listId !== listId);
-  target.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+  target.sort(compareForSort);
   inquiries = [...rest, ...target];
 }
 
-// 全リストを優先度順に並べ直す。同じ優先度の中の順序は sortListByPriority が保つ。
+// 全リストを優先度順に並べ直す。優先度も対応期限も同じものの順序は sortListByPriority が保つ。
 function sortAllByPriority() {
   LISTS.forEach((list) => sortListByPriority(list.id));
 }
@@ -412,7 +424,7 @@ priorityRadios.forEach((r) => {
     const inquiry = findEditing();
     if (!inquiry) return;
     // 優先度を変えた問い合わせは、同じリストの末尾に移してから優先度順に並べ直す
-    // → 変更後の優先度グループの末尾に入る
+    // → 変更後の優先度の中で対応期限に応じた位置（期限も同じものがあればその末尾）に入る
     inquiry.priority = r.value;
     inquiries = [...inquiries.filter((q) => q.id !== inquiry.id), inquiry];
     sortListByPriority(inquiry.listId);
