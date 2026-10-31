@@ -1,0 +1,44 @@
+#!/bin/bash
+# コンテナを起動する（インフラ設計書 7.2・7.4）。EC2 の起動時に systemd の ${project}.service が実行し、
+# デプロイのときはスクリプトが SSM Run Command で実行する。
+# 1. SSM パラメータストアから、イメージのタグと秘密の値を読んで .env（root だけが読める）に書く
+# 2. ECR にログインして、イメージを取得し、docker compose up -d する
+# 3. backend の /up（Rails の死活確認）が 200 を返すまで待つ。返らなければ失敗で終わる
+set -euo pipefail
+cd ${app_dir}
+
+param() {
+  aws ssm get-parameter --region ${region} --name "/${project}/$1" --with-decryption \
+    --query Parameter.Value --output text
+}
+
+umask 077
+{
+  echo "BACKEND_IMAGE_TAG=$(param backend-image-tag)"
+  echo "WEB_IMAGE_TAG=$(param web-image-tag)"
+  echo "DATABASE_PASSWORD=$(param db-password)"
+  echo "SECRET_KEY_BASE=$(param secret-key-base)"
+  echo "ORIGIN_VERIFY=$(param origin-verify)"
+} > .env.new
+mv .env.new .env
+echo "イメージ: backend=$(grep ^BACKEND_IMAGE_TAG= .env | cut -d= -f2) web=$(grep ^WEB_IMAGE_TAG= .env | cut -d= -f2)"
+
+aws ecr get-login-password --region ${region} \
+  | docker login --username AWS --password-stdin ${ecr_registry}
+docker compose pull --quiet
+docker compose up -d --remove-orphans
+
+# 新規の DB では db:prepare がテーブルを作るため、初回は少し時間がかかる
+for i in $(seq 1 60); do
+  if docker compose exec -T backend curl -fsS -o /dev/null http://localhost:3000/up; then
+    echo "backend は起動しています（/up が 200）"
+    docker image prune -af --filter "until=24h" > /dev/null || true
+    exit 0
+  fi
+  sleep 5
+done
+
+echo "backend が 5 分以内に起動しませんでした" >&2
+docker compose ps >&2
+docker compose logs --tail 50 backend >&2
+exit 1

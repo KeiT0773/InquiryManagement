@@ -1,0 +1,13 @@
+# terraform.tfvars の記入例。startup.sh は terraform.tfvars が無ければこのファイルから作り、
+# 以下の値を自動で書き換える（手順書 6.1）。手で書く必要はない。
+
+# EC2 で動かすイメージのタグ（Git のコミットの短縮ハッシュ。例："bf51bd0"）
+backend_image_tag = ""
+web_image_tag     = ""
+
+# DB を復元するスナップショットの名前。空なら DB を新規に作る（例："inquirymanagement-20261101-2130"）
+db_snapshot_identifier = ""
+
+# アクセスを許可する自宅の IPv6 のネットワーク番号（先頭 64 ビット）。インフラ設計書 6.4
+# startup.sh / update-allowed-ip.sh が、その時点の PC の IPv6 アドレスから自動で書く（例：["240d:1a:9e6:8c00::/64"]）
+allowed_viewer_ipv6_prefixes = []

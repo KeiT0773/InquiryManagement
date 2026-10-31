@@ -7,7 +7,7 @@
 | フロントエンド | Next.js（静的書き出し） | [frontend/](frontend/) |
 | バックエンド | Ruby on Rails（API モード） | [backend/](backend/) |
 | データベース | MySQL 8.4 | `compose.yaml`（ローカル） |
-| 本番環境 | AWS（CloudFront + EC2 + RDS） | `infra/`（作成予定） |
+| 本番環境 | AWS（CloudFront + EC2 + RDS） | [infra/](infra/)（手順は [AWS デプロイ手順書](docs/aws-deployment-guide.md)） |
 
 要件と設計は [docs/](docs/)、Claude Code が従うルールは [CLAUDE.md](CLAUDE.md)、画面モックは [mock/](mock/) にある。
 
