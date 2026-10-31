@@ -130,6 +130,8 @@ gh pr merge --squash
 
 Ruby は PC に入れず、Rails のコマンド（`bin/rails`、`bin/rubocop`、`bundle` など）は **必ず `docker compose exec backend` を付けてコンテナの中で実行する**（[技術スタック](docs/tech-stack.md) 6.）。
 
+**Claude が自分で `docker compose exec` を実行するときは `-T` を付ける**（例：`docker compose exec -T backend bin/ci`）。Claude のシェルには端末が無く、`-T` が無いと端末の割り当てを待って止まる。ユーザーに渡すコマンドには付けなくてよい。
+
 ### Git Bash から `gh api` を使うときの注意
 
 Git Bash（MSYS）はスラッシュで始まる引数を Windows のパスとして書き換えてしまう。`gh api` のエンドポイントは **先頭のスラッシュを省く**こと。
@@ -146,6 +148,7 @@ gh api /repos/KeiT0773/InquiryManagement/rulesets  # invalid API endpoint エラ
 ```bash
 # 1. データベースとバックエンド（リポジトリルートで実行。MySQL と Rails のコンテナが起動する）
 docker compose up -d
+docker compose exec backend bin/rails db:prepare   # 初回だけ（DB の作成とマイグレーション）
 
 # 2. フロントエンド（別のターミナルで）
 cd frontend
@@ -194,7 +197,7 @@ npm run dev
 
 ## 7. 品質チェック・レビュー
 
-実装の品質チェックやレビューを行うとき、および PR を作る前のセルフレビューは、スキル `quality-review`（[.claude/skills/quality-review/SKILL.md](.claude/skills/quality-review/SKILL.md)）に従う。機械チェック（`cd frontend && npm run check`、`docker compose exec backend bin/rubocop`・`bin/brakeman`・`bin/rails test`）→ 文書との突き合わせ → 標準からのずれ、の順で確認し、文書と実装が食い違っていれば文書を正として実装を直す。
+実装の品質チェックやレビューを行うとき、および PR を作る前のセルフレビューは、スキル `quality-review`（[.claude/skills/quality-review/SKILL.md](.claude/skills/quality-review/SKILL.md)）に従う。機械チェック（`cd frontend && npm run check`、`docker compose exec -T backend bin/ci`）→ 文書との突き合わせ → 標準からのずれ、の順で確認し、文書と実装が食い違っていれば文書を正として実装を直す。
 
 ---
 

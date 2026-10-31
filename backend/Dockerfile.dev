@@ -1,0 +1,19 @@
+# ローカル開発用の Rails のイメージ（compose.yaml の backend）。
+# 本番用は同じディレクトリの Dockerfile（Rails の雛形のまま。インフラ設計書 7.3）。
+# ソースはイメージに入れず、compose.yaml で /rails にマウントする。gem は名前付きボリュームに置く。
+ARG RUBY_VERSION=4.0.9
+FROM docker.io/library/ruby:$RUBY_VERSION-slim
+
+WORKDIR /rails
+
+# mysql2 などのネイティブ拡張のビルドに必要なもの、DB の接続確認用の mysql クライアント
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y build-essential default-libmysqlclient-dev default-mysql-client git libyaml-dev pkg-config curl && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+ENV BUNDLE_PATH="/usr/local/bundle"
+
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+EXPOSE 3001

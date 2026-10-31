@@ -1,0 +1,48 @@
+# ローカル開発用の Docker Compose（技術スタック 5.・6.）。
+# MySQL（3306）と Rails（3001）を起動する。フロントエンド（Next.js、3000）は PC の Node.js で動かす。
+# パスワードはローカル専用の固定値。本番の秘密情報は SSM パラメータストアに置く（インフラ設計書 9.）。
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: inquirymanagement_development
+      MYSQL_USER: inquirymanagement
+      MYSQL_PASSWORD: inquirymanagement
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 初回起動時だけ実行される。テスト用 DB を Rails が作れるよう権限を与える
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    # Rails の既定 3000 は Next.js と重なるため 3001 で起動する（技術スタック 6.1）。
+    # 前回の異常終了で残った PID ファイルがあると起動できないため、起動前に消す
+    command: bash -c "rm -f tmp/pids/server.pid && bin/rails server -b 0.0.0.0 -p 3001"
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_HOST: db
+      DATABASE_USERNAME: inquirymanagement
+      DATABASE_PASSWORD: inquirymanagement
+    volumes:
+      - ./backend:/rails
+      - bundle:/usr/local/bundle
+    depends_on:
+      db:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+
+volumes:
+  mysql-data:
+  bundle:
