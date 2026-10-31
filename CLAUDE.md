@@ -15,7 +15,7 @@
 | --- | --- |
 | [要件定義書](docs/requirements.md) | 背景・目的、スコープ、非機能要件、制約、決定事項、受け入れ基準（上位文書） |
 | [機能要件書](docs/functional-requirements.md) | 機能一覧と機能ごとの詳細（FR-01〜FR-10） |
-| [画面要件書](docs/screen-requirements.md) | 画面一覧、画面構成、画面遷移、画面イメージ（SC-01 ボード画面, SC-02 問い合わせ詳細）（作成予定） |
+| [画面要件書](docs/screen-requirements.md) | 画面一覧、画面構成、画面遷移、画面イメージ（SC-01 ボード画面, SC-02 問い合わせ詳細） |
 | [データ要件書](docs/data-requirements.md) | データ項目の定義、ER図、データフロー図（作成予定） |
 | [データ設計書](docs/data-design.md) | テーブル定義、制約、初期データ、マイグレーション方針（作成予定） |
 | [API 設計書](docs/api-design.md) | REST API の一覧、共通方針、要求・応答の JSON 形式（作成予定） |
@@ -25,7 +25,7 @@
 | [AWS デプロイ手順書](docs/aws-deployment-guide.md) | AWS・Terraform・IaC の解説、AWS CLI の認証設定、構築・更新・休止・再開の手順（作成予定） |
 | [開発フロー](docs/development-workflow.md) | Issue・ブランチ・PR の運用ルール |
 
-構成は `docs/`（要件定義書・設計書）、`mock/`（画面モック）、`backend/`（Spring Boot）、`frontend/`（React + Vite）、`infra/`（AWS の構成の Terraform とデプロイ用スクリプト）、`compose.yaml`（ローカル開発用 PostgreSQL）。現時点で存在するのは `docs/requirements.md`、`docs/functional-requirements.md`、`docs/development-workflow.md`、`mock/` だけで、それ以外は技術スタックを決めたあとに作る。4. 以降のサーバー・品質チェック・デプロイの規則は、タスク管理アプリと同じ構成になる前提で先に置いている。
+構成は `docs/`（要件定義書・設計書）、`mock/`（画面モック）、`backend/`（Spring Boot）、`frontend/`（React + Vite）、`infra/`（AWS の構成の Terraform とデプロイ用スクリプト）、`compose.yaml`（ローカル開発用 PostgreSQL）。現時点で存在するのは `docs/requirements.md`、`docs/functional-requirements.md`、`docs/screen-requirements.md`、`docs/development-workflow.md`、`mock/` だけで、それ以外は技術スタックを決めたあとに作る。4. 以降のサーバー・品質チェック・デプロイの規則は、タスク管理アプリと同じ構成になる前提で先に置いている。
 
 ---
 
