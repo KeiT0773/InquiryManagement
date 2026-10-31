@@ -1,0 +1,15 @@
+# テストの DB は schema.rb から作るため、マイグレーションの初期データは入らない。ここで同じ 3 件を入れる
+open:
+  id: open
+  name: 未対応
+  display_order: 0
+
+working:
+  id: working
+  name: 対応中
+  display_order: 1
+
+closed:
+  id: closed
+  name: 完了
+  display_order: 2

@@ -1,9 +1,14 @@
-# This file should ensure the existence of records required to run the application in every environment (production,
-# development, test). The code here should be idempotent so that it can be executed at any point in every environment.
-# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
+# すべての環境で実行する（データ設計書 10.4）。何度実行しても同じ結果になるように書く。
 #
-# Example:
-#
-#   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
-#     MovieGenre.find_or_create_by!(name: genre_name)
-#   end
+# リストの 3 件はマイグレーションでも入れているが、ここでも入れる。
+# DB が空のときの db:prepare・db:reset は、マイグレーションを実行せずに schema.rb を読み込むため、
+# マイグレーションの INSERT が実行されない。そのあとに実行されるこのファイルで補う（データ設計書 7.1）。
+List.upsert_all([
+  { id: "open", name: "未対応", display_order: 0 },
+  { id: "working", name: "対応中", display_order: 1 },
+  { id: "closed", name: "完了", display_order: 2 }
+])
+
+# 環境ごとのデータ（開発用のサンプルなど）。本番用のファイルは置かないので、本番では何も入らない
+environment_seeds = Rails.root.join("db/seeds/#{Rails.env}.rb")
+load environment_seeds if environment_seeds.exist?
