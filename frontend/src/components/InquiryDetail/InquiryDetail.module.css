@@ -1,0 +1,147 @@
+/* 画面モック（mock/style.css）の SC-02 問い合わせ詳細（.modal-overlay 〜 .btn-delete）から */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 30, 66, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  width: 600px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  max-width: calc(100% - 32px);
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(9, 30, 66, 0.35);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid #dfe1e6;
+}
+
+.heading {
+  margin: 0;
+  font-size: 17px;
+}
+
+.saving {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: normal;
+  color: #5e6c84;
+}
+
+.close {
+  padding: 6px 12px;
+  border: 1px solid #c1c7d0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: bold;
+  color: #5e6c84;
+}
+
+.input,
+.textarea {
+  padding: 8px 10px;
+  border: 1px solid #c1c7d0;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.row {
+  display: flex;
+  gap: 16px;
+}
+
+.grow {
+  flex: 1;
+}
+
+.received {
+  margin: 0;
+  font-size: 12px;
+  color: #5e6c84;
+}
+
+.priorityOptions {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding-top: 6px;
+}
+
+.priorityOption {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.error {
+  margin: 0;
+  font-size: 12px;
+  color: #de350b;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid #dfe1e6;
+}
+
+.delete {
+  padding: 8px 14px;
+  border: 1px solid #de350b;
+  border-radius: 4px;
+  background: #fff;
+  color: #de350b;
+  cursor: pointer;
+}
+
+.delete:hover:not(:disabled) {
+  background: #de350b;
+  color: #fff;
+}
+
+.delete:disabled {
+  cursor: default;
+  opacity: 0.6;
+}

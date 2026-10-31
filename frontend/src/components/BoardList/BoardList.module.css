@@ -1,0 +1,45 @@
+/* 画面モック（mock/style.css）の .list・.list-header・.card-container から */
+.list {
+  display: flex;
+  flex-direction: column;
+  background: #ebecf0;
+  border-radius: 8px;
+  min-height: 0;
+}
+
+.header {
+  margin: 0;
+  padding: 12px 14px 8px;
+  border-top: 4px solid transparent;
+  border-radius: 8px 8px 0 0;
+  font-weight: bold;
+  font-size: 15px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ステータスごとの見出しの色 */
+.open .header {
+  border-top-color: #de350b;
+}
+
+.working .header {
+  border-top-color: #0052cc;
+}
+
+.closed .header {
+  border-top-color: #36b37e;
+}
+
+.count {
+  font-weight: normal;
+  color: #5e6c84;
+  font-size: 13px;
+}
+
+.cards {
+  flex: 1;
+  padding: 0 10px;
+  overflow-y: auto; /* 問い合わせが多いときはリスト内だけスクロール */
+  min-height: 40px;
+}
