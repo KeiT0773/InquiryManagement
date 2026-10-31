@@ -19,7 +19,7 @@
 | [データ要件書](docs/data-requirements.md) | データ項目の定義、ER図、データフロー図 |
 | [データ設計書](docs/data-design.md) | テーブル定義、制約、初期データ、マイグレーション方針 |
 | [API 設計書](docs/api-design.md) | REST API の一覧、共通方針、要求・応答の JSON 形式 |
-| [フロントエンド設計書](docs/frontend-design.md) | コンポーネント構成、状態の持ち方、API 呼び出しの方針、表示ルール（作成予定） |
+| [フロントエンド設計書](docs/frontend-design.md) | コンポーネント構成、状態の持ち方、API 呼び出しの方針、表示ルール |
 | [技術スタック](docs/tech-stack.md) | 各層で使用する言語・フレームワーク・周辺ツールの選定と理由 |
 | [インフラ設計書](docs/infra-design.md) | AWS 上の構成（CloudFront + EC2 + RDS）、ネットワーク、秘密情報、費用、Terraform の構成（作成予定） |
 | [AWS デプロイ手順書](docs/aws-deployment-guide.md) | AWS・Terraform・IaC の解説、AWS CLI の認証設定、構築・更新・休止・再開の手順（作成予定） |
