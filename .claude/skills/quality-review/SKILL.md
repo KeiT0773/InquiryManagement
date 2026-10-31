@@ -92,7 +92,7 @@ Docker Desktop が止まっていてコンテナを起動できないときは�
 
 ## 5. インフラ（Terraform・スクリプト）のチェックリスト
 
-`infra/` を変えたとき、またはレビューを頼まれたときに確認する。根拠はインフラ設計書（作成後に章番号を追記する）。
+`infra/` を変えたとき、またはレビューを頼まれたときに確認する。根拠は [docs/infra-design.md](../../../docs/infra-design.md)（以下「設計書」）。
 
 **規模と費用（要件定義書 7.「費用」）**
 - EC2・RDS の規模が設計書 2.1 の上限（`t3.micro`、`db.t4g.micro` / `db.t3.micro`、gp3 20 GB）を超えていない。`variables.tf` の validation で制限している
