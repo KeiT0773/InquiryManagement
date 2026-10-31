@@ -1,0 +1,13 @@
+# 改行コードをリポジトリ全体で LF に統一する。
+# core.autocrlf の設定に関わらず、checkout 時も LF になる（この指定が優先される）。
+# Prettier の既定（endOfLine: lf）と一致させ、Windows 上でも format:check が通るようにする。
+* text=auto eol=lf
+
+# Windows のバッチファイルだけは CRLF でないと動作しないことがある
+*.bat text eol=crlf
+
+# バイナリは改行変換の対象にしない
+*.jar binary
+*.png binary
+*.jpg binary
+*.ico binary

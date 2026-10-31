@@ -1,0 +1,55 @@
+name: バグ報告
+description: 既存の機能が期待どおりに動かない
+title: "fix: "
+labels: ["type:fix"]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      description: 誰が読んでも同じ操作をたどれるように、番号を振って書きます。
+      value: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作
+      placeholder: 例：問い合わせの優先度を「高」に変更すると、リストの先頭側へ移動する。
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動作
+      description: エラーメッセージやログがあれば、そのまま貼り付けてください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 発生環境
+      value: |
+        - OS: 
+        - ブラウザ: 
+        - 発生した箇所（画面 / API / DB）: 
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 優先度
+      options:
+        - 高
+        - 中
+        - 低
+      default: 1
+    validations:
+      required: true
