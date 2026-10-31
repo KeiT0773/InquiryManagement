@@ -100,6 +100,43 @@ class InquiryTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 10, 30), inquiry.reload.received_on
   end
 
+  # --- 表示順を振り直すトランザクション（データ設計書 6.2） ---
+
+  test "ロックを待つ間に別のリストへ動かされていたら、読み直した list_id でやり直す" do
+    inquiry = inquiries(:login)
+    Inquiry.find(inquiry.id).update_columns(list_id: "working") # ほかのメンバーが動かした
+    attempts = 0
+
+    Inquiry.reorder_transaction do
+      attempts += 1
+      inquiry.lock_lists!
+    end
+
+    assert_equal 2, attempts
+    assert_equal "working", inquiry.list_id
+  end
+
+  test "デッドロックで取り消されたら、最初からやり直す。続けて失敗したら例外を返す" do
+    attempts = 0
+    Inquiry.reorder_transaction do
+      attempts += 1
+      raise ActiveRecord::Deadlocked, "deadlock" if attempts == 1
+    end
+    assert_equal 2, attempts
+
+    assert_raises(ActiveRecord::Deadlocked) do
+      Inquiry.reorder_transaction(attempts: 3) { raise ActiveRecord::Deadlocked, "deadlock" }
+    end
+  end
+
+  test "sort_by_priority は優先度 → 期限の近い順（未設定は後ろ）、同じものは元の順序を保つ" do
+    rows = [ [ "a", "low", nil ], [ "b", "high", nil ], [ "c", "medium", "2026-11-05" ], [ "d", "high", "2026-11-01" ],
+             [ "e", "medium", nil ], [ "f", "medium", "2026-11-05" ], [ "g", "high", nil ] ]
+    inquiries = rows.map { |title, priority, due_on| Inquiry.new(title: title, priority: priority, due_on: due_on) }
+
+    assert_equal %w[d b g c f e a], Inquiry.sort_by_priority(inquiries).map(&:title)
+  end
+
   # --- DB の制約（モデルを通らない書き込みに対する最後の防壁。データ設計書 5.1） ---
 
   test "DB の CHECK 制約が、空白だけの必須項目と一覧にない値を拒否する" do

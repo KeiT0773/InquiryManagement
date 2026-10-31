@@ -36,6 +36,10 @@ module Backend
     # 「今日」の日付（受付日・期限超過）は日本時間で決める。DB には UTC で保存する（データ設計書 5.4）
     config.time_zone = "Tokyo"
 
+    # コントローラーの外で起きた失敗も Problem Details で返す（API 設計書 2.1）。
+    # 起動の時点では lib/ のクラスをまだ読み込めないため、要求が来たときに参照する
+    config.exceptions_app = ->(env) { ProblemDetailsExceptionsApp.call(env) }
+
     # 入力チェックのメッセージは日本語で返す（API 設計書 2.1）
     config.i18n.default_locale = :ja
     config.i18n.available_locales = [ :ja ]
