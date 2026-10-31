@@ -17,7 +17,7 @@
 | [機能要件書](docs/functional-requirements.md) | 機能一覧と機能ごとの詳細（FR-01〜FR-10） |
 | [画面要件書](docs/screen-requirements.md) | 画面一覧、画面構成、画面遷移、画面イメージ（SC-01 ボード画面, SC-02 問い合わせ詳細） |
 | [データ要件書](docs/data-requirements.md) | データ項目の定義、ER図、データフロー図 |
-| [データ設計書](docs/data-design.md) | テーブル定義、制約、初期データ、マイグレーション方針（作成予定） |
+| [データ設計書](docs/data-design.md) | テーブル定義、制約、初期データ、マイグレーション方針 |
 | [API 設計書](docs/api-design.md) | REST API の一覧、共通方針、要求・応答の JSON 形式（作成予定） |
 | [フロントエンド設計書](docs/frontend-design.md) | コンポーネント構成、状態の持ち方、API 呼び出しの方針、表示ルール（作成予定） |
 | [技術スタック](docs/tech-stack.md) | 各層で使用する言語・フレームワーク・周辺ツールの選定と理由 |
