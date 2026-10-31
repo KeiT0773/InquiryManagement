@@ -83,7 +83,7 @@ Next.js の開発サーバーは、3000 が使用中だと `Port 3000 is in use,
 | http://localhost:3001/up | 200（Rails 標準の死活確認。緑の画面） |
 | http://localhost:3000 | ボード画面 |
 
-Rails が起動しないときは `docker compose logs backend` で原因を見る。DB の準備ができていない（マイグレーション前）なら `docker compose exec backend bin/rails db:prepare` を実行する。
+Rails が起動しないときは `docker compose logs backend` で原因を見る。DB の準備ができていない（マイグレーション前）なら `docker compose exec -T backend bin/rails db:prepare` を実行する。Claude が実行するときは `-T` を必ず付ける（端末が無いため、付けないと止まる。CLAUDE.md 3.）。
 
 ## やってはいけないこと
 

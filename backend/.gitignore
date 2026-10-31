@@ -1,0 +1,25 @@
+# Rails の雛形が作る .gitignore と同じ内容（雛形は --skip-git で作ったため手で置く）
+
+# 環境変数のファイル
+/.env*
+
+# ログと一時ファイル
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+# PID ファイル（tmp/pids）
+/tmp/pids/*
+!/tmp/pids/
+!/tmp/pids/.keep
+
+# アップロードされたファイル（本アプリでは使わない）
+/storage/*
+!/storage/.keep
+/tmp/storage/*
+!/tmp/storage/
+!/tmp/storage/.keep
+
+# 資格情報の鍵。絶対にコミットしない（インフラ設計書 9.）
+/config/master.key

@@ -15,9 +15,10 @@ cd frontend && npm run check
 
 # バックエンド：Rails はコンテナの中で実行する（PC に Ruby は無い）
 docker compose up -d                                   # リポジトリルート。MySQL と Rails
-docker compose exec backend bin/rubocop                # コード検査（rubocop-rails-omakase）
-docker compose exec backend bin/brakeman --no-pager    # セキュリティ検査
-docker compose exec backend bin/rails test             # テスト（MySQL が必要）
+docker compose exec -T backend bin/ci                  # 下の 3 つと bundler-audit・seed の確認をまとめて実行（3〜4 分）
+docker compose exec -T backend bin/rubocop             # コード検査（rubocop-rails-omakase）
+docker compose exec -T backend bin/brakeman --no-pager # セキュリティ検査
+docker compose exec -T backend bin/rails test          # テスト（MySQL が必要）
 
 # インフラ（infra/ を変えたとき）：書式 → 文法 → 計画（読み取りのみ）→ スクリプトの構文
 terraform -chdir=infra/terraform fmt -check -recursive
@@ -26,7 +27,7 @@ terraform -chdir=infra/terraform plan -lock=false     # apply はしない
 for f in infra/scripts/*.sh; do bash -n "$f" || echo "NG: $f"; done
 ```
 
-Rails 8.1 の雛形に `bin/ci`（上の 3 つをまとめて実行する仕組み）があれば、`docker compose exec backend bin/ci` で代えてよい。
+Claude のシェルには端末が無いため、`docker compose exec` には必ず `-T` を付ける（付けないと止まる。CLAUDE.md 3.）。
 
 | チェック | 合格条件 | 落ちたとき |
 | --- | --- | --- |

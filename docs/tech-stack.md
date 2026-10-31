@@ -5,7 +5,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書名 | 問い合わせ管理アプリ 技術スタック |
-| 版数 | 1.4 |
+| 版数 | 1.5 |
 | 作成日 | 2026-10-31 |
 | 最終更新日 | 2026-10-31 |
 | 作成者 | KeiT0773 |
@@ -26,6 +26,7 @@
 | 1.2 | 2026-10-31 | CLAUDE.md・フック・スキルを新しい技術に合わせたことに伴い、6.1 の注記を更新 | KeiT0773 |
 | 1.3 | 2026-10-31 | フロントエンド設計書の作成に伴い、4. に API の URL の環境変数名を追記し、フロントエンド設計書への参照をリンクに変更 | KeiT0773 |
 | 1.4 | 2026-10-31 | インフラ設計書の作成に伴い、9. の nginx・Rails の実行・IaC の行と CloudFront と EC2 の間の守り方を、インフラ設計書の決定に合わせて更新 | KeiT0773 |
+| 1.5 | 2026-10-31 | バックエンドの雛形の作成に伴い、Ruby（4.0.9）・Rails（8.1.4）・Puma・mysql2・rack-cors・RuboCop・Brakeman の版数を確定し、bundler-audit と `bin/ci` を追記。ローカルの MySQL の版（8.4.13）を追記 | KeiT0773 |
 
 ---
 
@@ -54,18 +55,18 @@
 
 | 項目 | 選定 | 役割・選定理由 |
 | --- | --- | --- |
-| 言語 | Ruby 4.0 系 | プロジェクト方針として指定。2025-12 に公開された最新の系列で、作成時点の最新は 4.0.6 以降。Rails 8.1 が対応する。雛形作成時に Rails や gem の対応に問題があれば 3.4 系にとどめる |
-| フレームワーク | Ruby on Rails 8.1 系（API モード） | Ruby の Web アプリケーション開発で最も標準的で、教材・記事が最も多い。作成時点の最新は 8.1.3 以降（セキュリティ更新は 2027-10 まで）。画面は Next.js が受け持つため、画面の生成に使う機能を省いた API モード（`rails new --api`）で作る |
-| Web サーバー | Puma | Rails の雛形に同梱。HTTP の要求を受けて Rails に渡す |
+| 言語 | Ruby 4.0.9 | プロジェクト方針として指定。雛形作成時（2026-10-31）の最新（公式の Docker イメージ `ruby:4.0`）。`backend/.ruby-version` と `Dockerfile` の `RUBY_VERSION` で固定する |
+| フレームワーク | Ruby on Rails 8.1.4（API モード） | Ruby の Web アプリケーション開発で最も標準的で、教材・記事が最も多い。雛形作成時（2026-10-31）の最新（セキュリティ更新は 2027-10 まで）。画面は Next.js が受け持つため、API モード（`rails new --api -d mysql`）で作った。使わない機能（Kamal・Thruster・Solid Cache / Queue / Cable・Jbuilder・メール・Action Text・Active Storage・Action Cable）は雛形の作成時に外した |
+| Web サーバー | Puma 8.0 | Rails の雛形に同梱。HTTP の要求を受けて Rails に渡す |
 | パッケージ管理 | Bundler（RubyGems） | Ruby に同梱。使う gem（ライブラリ）と版数を `Gemfile` / `Gemfile.lock` で管理する |
 | REST API | Rails の Action Controller（API モード） | フロントエンドからの HTTP 要求を受け付け、JSON で応答する |
-| CORS | rack-cors | 開発時は画面（http://localhost:3000）と API（http://localhost:3001）のポートが異なり、ブラウザが別のサイトとして扱うため、Rails 側で画面からの呼び出しを許可する（8. No.2）。API モードの雛形の `Gemfile` にコメントアウトされた状態で入っているものを有効にする。許可する送信元は設定で切り替え、開発時の `http://localhost:3000` だけとする。本番は CloudFront で画面と API を同じドメインにするため、送信元を許可する必要が無い（9.） |
+| CORS | rack-cors 3.0 | 開発時は画面（http://localhost:3000）と API（http://localhost:3001）のポートが異なり、ブラウザが別のサイトとして扱うため、Rails 側で画面からの呼び出しを許可する（8. No.2）。API モードの雛形の `Gemfile` にコメントアウトされた状態で入っているものを有効にする。許可する送信元は設定で切り替え、開発時の `http://localhost:3000` だけとする。本番は CloudFront で画面と API を同じドメインにするため、送信元を許可する必要が無い（9.） |
 | DB アクセス | Active Record | Ruby のクラスとテーブルを対応づけ、SQL を直接書かずに読み書きする。Rails の標準 |
-| MySQL への接続 | mysql2 gem | `rails new -d mysql` で入る、Rails の標準の MySQL 接続ライブラリ |
+| MySQL への接続 | mysql2 0.5 | `rails new -d mysql` で入る、Rails の標準の MySQL 接続ライブラリ |
 | 入力チェック | Active Model の検証（validations） | 「件名・問い合わせ者・問い合わせ内容が空なら登録しない」（FR-01）などの検証をモデルに宣言する。Rails の標準 |
 | DB マイグレーション | Rails のマイグレーション（Active Record Migrations） | テーブル定義の変更を Ruby のファイルとして履歴管理し、`bin/rails db:migrate` で DB へ反映する。Rails の標準のため追加の選定は不要 |
-| コード検査 | RuboCop（rubocop-rails-omakase） | Rails 8 の雛形に同梱される、Rails チームが定めた規約による検査。`bin/rubocop` で実行する |
-| セキュリティ検査 | Brakeman | Rails 8 の雛形に同梱。SQL インジェクションなどの典型的な脆弱性をコードから検出する |
+| コード検査 | RuboCop（rubocop-rails-omakase 1.1） | Rails 8 の雛形に同梱される、Rails チームが定めた規約による検査。`bin/rubocop` で実行する。RuboCop・bundler-audit・Brakeman・テストは、Rails 8.1 の雛形の `bin/ci` でまとめて実行できる |
+| セキュリティ検査 | Brakeman 8.1 + bundler-audit | どちらも Rails 8 の雛形に同梱。Brakeman は SQL インジェクションなどの典型的な脆弱性をコードから、bundler-audit は使っている gem の既知の脆弱性を検出する |
 | テスト | Minitest（Rails 同梱） | Rails の標準のテストの仕組み。追加の選定は不要。RSpec の方が資料は多いが、必要になるまで追加しない方針（2.）を優先する |
 
 ---
@@ -93,7 +94,7 @@
 
 | 項目 | 選定 | 役割・選定理由 |
 | --- | --- | --- |
-| 製品 | MySQL 8.4 系（LTS） | プロジェクト方針として指定。8.4 は長期サポート版で、サポートは 2032-04 まで。新しい LTS の 9.7 系も公開されているが、本番で使う Amazon RDS では 9.7 がプレビュー環境でしか使えない（2026-10 時点）ため、RDS で正式に使える 8.4 系を選ぶ。ローカルと本番で同じ系列にそろえる |
+| 製品 | MySQL 8.4 系（LTS。ローカルは 8.4.13） | プロジェクト方針として指定。8.4 は長期サポート版で、サポートは 2032-04 まで。新しい LTS の 9.7 系も公開されているが、本番で使う Amazon RDS では 9.7 がプレビュー環境でしか使えない（2026-10 時点）ため、RDS で正式に使える 8.4 系を選ぶ。ローカルと本番で同じ系列にそろえる |
 | 文字コード | utf8mb4 | MySQL 8.4 の既定。日本語と絵文字を含むすべての文字を保存できる |
 | ローカルでの起動 | Docker Desktop + Docker Compose | PC に MySQL を直接インストールせず、コマンド一つで起動・破棄できる。公式イメージ `mysql:8.4` を使う |
 

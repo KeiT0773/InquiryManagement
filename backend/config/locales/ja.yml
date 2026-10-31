@@ -1,0 +1,16 @@
+# 日本語の辞書（API 設計書 2.1）。入力チェックのメッセージは「<項目名><メッセージ>」の形にする。
+#   例：件名を入力してください、件名は100文字以内で入力してください
+# モデルと項目の日本語名（activerecord.models / activerecord.attributes）は、モデルを作るときに追加する。
+ja:
+  errors:
+    format: "%{attribute}%{message}"
+    messages:
+      blank: "を入力してください"
+      required: "を入力してください"
+      empty: "を入力してください"
+      too_long: "は%{count}文字以内で入力してください"
+      inclusion: "は一覧にない値です"
+      invalid: "は不正な値です"
+      not_a_number: "は数値で指定してください"
+      not_an_integer: "は整数で指定してください"
+      greater_than_or_equal_to: "は%{count}以上で指定してください"

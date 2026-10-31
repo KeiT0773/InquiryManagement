@@ -1,0 +1,25 @@
+# MySQL 8.4（データ設計書 3.）。接続先は環境変数で渡す。
+#   ローカル：compose.yaml の db（DATABASE_HOST=db）
+#   本番：RDS（インフラ設計書 7.3・9.。パスワードは SSM パラメータストアから）
+default: &default
+  adapter: mysql2
+  encoding: utf8mb4
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: <%= ENV.fetch("DATABASE_HOST") { "127.0.0.1" } %>
+  username: <%= ENV.fetch("DATABASE_USERNAME") { "inquirymanagement" } %>
+  password: <%= ENV.fetch("DATABASE_PASSWORD") { "" } %>
+
+development:
+  <<: *default
+  database: inquirymanagement_development
+
+# 警告：test の DB は「bin/rails test」のたびに作り直される。development と同じ名前にしないこと
+test:
+  <<: *default
+  database: inquirymanagement_test
+
+production:
+  <<: *default
+  database: inquirymanagement
+  # RDS との接続は TLS を必須にする（インフラ設計書 6.3・8.）
+  ssl_mode: required
