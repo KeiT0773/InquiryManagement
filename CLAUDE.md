@@ -21,7 +21,7 @@
 | [API 設計書](docs/api-design.md) | REST API の一覧、共通方針、要求・応答の JSON 形式 |
 | [フロントエンド設計書](docs/frontend-design.md) | コンポーネント構成、状態の持ち方、API 呼び出しの方針、表示ルール |
 | [技術スタック](docs/tech-stack.md) | 各層で使用する言語・フレームワーク・周辺ツールの選定と理由 |
-| [インフラ設計書](docs/infra-design.md) | AWS 上の構成（CloudFront + EC2 + RDS）、ネットワーク、秘密情報、費用、Terraform の構成（作成予定） |
+| [インフラ設計書](docs/infra-design.md) | AWS 上の構成（CloudFront + EC2 + RDS）、ネットワーク、秘密情報、費用、Terraform の構成 |
 | [AWS デプロイ手順書](docs/aws-deployment-guide.md) | AWS・Terraform・IaC の解説、AWS CLI の認証設定、構築・更新・休止・再開の手順（作成予定） |
 | [開発フロー](docs/development-workflow.md) | Issue・ブランチ・PR の運用ルール |
 
@@ -200,10 +200,10 @@ npm run dev
 
 ## 8. AWS へのデプロイ
 
-AWS への構築・更新・休止・再開と、`infra/` の Terraform・スクリプトの実行は、スキル `deploy-aws`（[.claude/skills/deploy-aws/SKILL.md](.claude/skills/deploy-aws/SKILL.md)）に従う。具体的な手順はインフラ設計書の作成後にスキルへ書き足す。
+AWS への構築・更新・休止・再開と、`infra/` の Terraform・スクリプトの実行は、スキル `deploy-aws`（[.claude/skills/deploy-aws/SKILL.md](.claude/skills/deploy-aws/SKILL.md)）に従う。具体的な手順は、`infra/` の Terraform とスクリプトを作るときにスキルへ書き足す。
 
 - AWS の実物を変える操作は、内容（計画の集計など）を示して利用者の承認を得てから行う。スクリプトの `--yes` は承認後にだけ付ける
 - 撤去（`terraform destroy`、`aws ... delete-*`、`aws ec2 terminate-instances` など）は、消えるものを示し、その会話の中で利用者が明示的に承認してから実行する。前の承認は使い回さず、`-auto-approve` は付けない
 - `~/.aws/credentials` を読まない。アクセスキーを会話に出さない
-- 作業の最後に、稼働中か休止中かを報告する（稼働中の 1 時間あたりの費用はインフラ設計書で見積もる）
-- リソースの規模は、無料利用枠の対象と同じ規模を上限とする（要件定義書 7.「費用」。具体的な上限はインフラ設計書で定める）
+- 作業の最後に、稼働中か休止中かを報告する（稼働中は約 0.05 ドル / 時間かかる。[インフラ設計書](docs/infra-design.md) 11.）
+- リソースの規模は、無料利用枠の対象と同じ規模を上限とする（[インフラ設計書](docs/infra-design.md) 2.1）
