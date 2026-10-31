@@ -148,7 +148,7 @@ gh api /repos/KeiT0773/InquiryManagement/rulesets  # invalid API endpoint エラ
 ```bash
 # 1. データベースとバックエンド（リポジトリルートで実行。MySQL と Rails のコンテナが起動する）
 docker compose up -d
-docker compose exec backend bin/rails db:prepare   # 初回だけ（DB の作成とマイグレーション）
+docker compose exec backend bin/rails db:prepare   # 初回だけ（テーブルの作成と、リスト・サンプルデータの投入）
 
 # 2. フロントエンド（別のターミナルで）
 cd frontend

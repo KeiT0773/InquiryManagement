@@ -1,7 +1,27 @@
 # 日本語の辞書（API 設計書 2.1）。入力チェックのメッセージは「<項目名><メッセージ>」の形にする。
 #   例：件名を入力してください、件名は100文字以内で入力してください
-# モデルと項目の日本語名（activerecord.models / activerecord.attributes）は、モデルを作るときに追加する。
 ja:
+  activerecord:
+    models:
+      inquiry: "問い合わせ"
+      list: "リスト"
+    attributes:
+      inquiry:
+        title: "件名"
+        customer_name: "問い合わせ者"
+        contact: "連絡先"
+        category: "種別"
+        content: "問い合わせ内容"
+        memo: "対応メモ"
+        assignee: "対応者"
+        received_on: "受付日"
+        due_on: "対応期限"
+        priority: "優先度"
+        list: "所属リスト"
+        display_order: "表示順"
+      list:
+        name: "名称"
+        display_order: "並び順"
   errors:
     format: "%{attribute}%{message}"
     messages:

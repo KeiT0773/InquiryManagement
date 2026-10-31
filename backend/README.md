@@ -10,7 +10,7 @@
 
 ```bash
 docker compose up -d                                  # MySQL（3306）と Rails（3001）を起動
-docker compose exec backend bin/rails db:prepare      # 初回だけ：DB を作り、マイグレーションを適用する
+docker compose exec backend bin/rails db:prepare      # 初回だけ：テーブルを作り、リストとサンプルデータを入れる
 curl http://localhost:3001/up                         # 200 なら起動している
 docker compose logs -f backend                        # Rails のログを見る
 docker compose stop                                   # 停止（データは残る）
@@ -27,6 +27,7 @@ docker compose stop                                   # 停止（データは残
 | `docker compose exec backend bin/brakeman --no-pager` | セキュリティ検査 |
 | `docker compose exec backend bin/rails test` | テスト |
 | `docker compose exec backend bin/rails db:migrate` | マイグレーションの適用 |
+| `docker compose exec backend bin/rails db:seed` | リストの 3 件と開発用のサンプルデータ 8 件を入れる（何度実行しても重複しない。[データ設計書](../docs/data-design.md) 10.4） |
 | `docker compose exec backend bin/rails console` | Rails のコンソール |
 | `docker compose exec backend bundle install` | `Gemfile` を変えたあとの gem の導入（`Gemfile.lock` も更新される） |
 | `docker compose down -v` | コンテナと DB のデータを消す（開発中にやり直したいときだけ） |

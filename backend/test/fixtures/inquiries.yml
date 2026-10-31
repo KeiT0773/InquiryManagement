@@ -1,0 +1,36 @@
+# リストの主キーは文字列のため、list: open と書くと label から作った数値が入る。list_id で直接書く
+login:
+  title: ログインできない
+  customer_name: 山田 太郎
+  contact: yamada@example.com
+  category: bug
+  content: パスワードを再設定してもログイン画面に戻される。
+  received_on: 2026-10-30
+  due_on: 2026-11-01
+  priority: high
+  list_id: open
+  display_order: 0
+
+invoice:
+  title: 請求書の再発行について
+  customer_name: 佐藤 花子
+  category: question
+  content: 先月分の請求書を紛失したため再発行してほしい。
+  assignee: 小林
+  received_on: 2026-10-27
+  priority: medium
+  list_id: open
+  display_order: 1
+
+plan:
+  title: プラン変更の手続き
+  customer_name: 高橋 美咲
+  category: question
+  content: 年契約から月契約に切り替えたい。
+  memo: 契約担当に確認中。
+  assignee: 小林
+  received_on: 2026-10-28
+  due_on: 2026-11-03
+  priority: medium
+  list_id: working
+  display_order: 0
