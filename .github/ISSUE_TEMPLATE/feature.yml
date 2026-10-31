@@ -9,13 +9,23 @@ body:
         機能を追加するときはこのテンプレートを使います。
         作業を始める前に、[機能要件書](https://github.com/KeiT0773/InquiryManagement/blob/main/docs/functional-requirements.md) の該当箇所を確認してください。
 
-  # 機能要件書が確定したら、機能 ID の選択式（dropdown）に改める
-  - type: input
+  - type: dropdown
     id: feature-id
     attributes:
       label: 関連する機能 ID
-      description: 機能要件書で定義された機能 ID を書きます。該当がなければ「該当なし（新規）」と書き、背景欄に理由を書いてください。
-      placeholder: 例：FR-01 問い合わせ登録
+      description: 機能要件書で定義された機能 ID を選びます。該当がなければ「該当なし（新規）」を選び、背景欄に理由を書いてください。
+      options:
+        - FR-01 問い合わせ登録
+        - FR-02 問い合わせ編集
+        - FR-03 問い合わせ削除
+        - FR-04 ステータス変更
+        - FR-05 問い合わせの並べ替え
+        - FR-06 対応者の設定
+        - FR-07 対応期限の設定
+        - FR-08 優先度の設定
+        - FR-09 データ保存
+        - FR-10 全リストの優先度順並べ替え
+        - 該当なし（新規）
     validations:
       required: true
 
