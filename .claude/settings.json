@@ -77,7 +77,11 @@
       "PowerShell(terraform *apply*)",
       "PowerShell(terraform *destroy*)",
       "PowerShell(aws * create-*)",
-      "PowerShell(aws * delete-*)"
+      "PowerShell(aws * delete-*)",
+      "Bash(aws * run-instances*)",
+      "Bash(aws * terminate-*)",
+      "PowerShell(aws * run-instances*)",
+      "PowerShell(aws * terminate-*)"
     ]
   },
   "hooks": {

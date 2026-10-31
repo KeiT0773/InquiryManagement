@@ -5,8 +5,8 @@
 # 既定以外のポートで起動しようとするコマンドは、終了コード 2 を返して実行を中止させる。
 #
 # 既定のポート:
-#   バックエンド（Spring Boot） 8080
-#   フロントエンド（Vite）      5173
+#   フロントエンド（Next.js） 3000
+#   バックエンド（Rails）     3001（Rails の既定 3000 は Next.js と重なるため。docs/tech-stack.md 6.1）
 #
 # ポートが使用中のときは、別のポートへ逃げるのではなく、占有しているプロセスを
 # 停止してから既定のポートで起動する。手順は .claude/skills/start-dev-servers/SKILL.md
@@ -14,8 +14,8 @@
 
 $ErrorActionPreference = 'Stop'
 
-$BackendPort  = 8080
-$FrontendPort = 5173
+$FrontendPort = 3000
+$BackendPort  = 3001
 
 # 標準エラー出力はコンソールの既定コードページで書かれると日本語が文字化けするため、
 # UTF-8 のバイト列を直接ストリームへ書き込む。
@@ -35,8 +35,8 @@ function Deny([string]$server, [int]$defaultPort, [string]$requested, [string]$t
 [ポート規則違反] $server を既定以外のポート（$requested）で起動しようとしています。（$text）
 
 このリポジトリでは、サーバーは必ず既定のポートで起動します。
-  バックエンド（Spring Boot） 8080
-  フロントエンド（Vite）      5173
+  フロントエンド（Next.js） 3000
+  バックエンド（Rails）     3001
 
 ポート $defaultPort が使用中なら、別のポートへ逃げるのではなく、占有している
 プロセスを停止してから既定のポートで起動し直してください。
@@ -81,29 +81,25 @@ foreach ($segment in $segments) {
     $text = $segment.Trim()
     if ($text -eq '') { continue }
 
-    # フロントエンド: vite / npm run dev / npm start に --port <n> または --port=<n>
-    $isFrontend = ($text -match '(^|[\s/\\])vite(\.js)?(\s|$)') -or
+    # ポートの指定を取り出す: --port <n> / --port=<n> / -p <n> / -p<n> / 環境変数 PORT=<n>
+    $requested = $null
+    if ($text -match '(?:^|\s)(?:--port|-p)(?:=|\s*)(\d+)') { $requested = [int]$Matches[1] }
+    elseif ($text -match '(?:^|\s)PORT=(\d+)') { $requested = [int]$Matches[1] }
+    if ($null -eq $requested) { continue }
+
+    # フロントエンド: next dev / next start / npm run dev / npm start / npx next
+    $isFrontend = ($text -match '\bnext\s+(dev|start)\b') -or
                   ($text -match '\bnpm\s+(run\s+dev|start)\b') -or
-                  ($text -match '\bnpx\s+vite\b')
-    if ($isFrontend -and $text -match '--port(?:=|\s+)(\d+)') {
-        $requested = [int]$Matches[1]
-        if ($requested -ne $FrontendPort) {
-            Deny 'フロントエンド（Vite）' $FrontendPort $requested $text
-        }
+                  ($text -match '\bnpx\s+next\b')
+    if ($isFrontend -and $requested -ne $FrontendPort) {
+        Deny 'フロントエンド（Next.js）' $FrontendPort $requested $text
     }
 
-    # バックエンド: gradlew bootRun / java -jar / spring-boot:run に
-    # server.port=<n>、-Dserver.port=<n>、SERVER_PORT=<n>
-    $isBackend = ($text -match '\bbootRun\b') -or
-                 ($text -match '\bspring-boot:run\b') -or
-                 ($text -match '\bjava(\.exe)?\b.*\.jar\b')
-    if ($isBackend) {
-        $requested = $null
-        if ($text -match 'server\.port(?:=|\s+)(\d+)') { $requested = [int]$Matches[1] }
-        elseif ($text -match '\bSERVER_PORT=(\d+)') { $requested = [int]$Matches[1] }
-        if ($null -ne $requested -and $requested -ne $BackendPort) {
-            Deny 'バックエンド（Spring Boot）' $BackendPort $requested $text
-        }
+    # バックエンド: rails server / rails s / puma / rackup（docker compose exec 経由を含む）
+    $isBackend = ($text -match '\brails\s+(server|s)\b') -or
+                 ($text -match '\b(puma|rackup)\b')
+    if ($isBackend -and $requested -ne $BackendPort) {
+        Deny 'バックエンド（Rails）' $BackendPort $requested $text
     }
 }
 

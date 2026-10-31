@@ -27,8 +27,6 @@
 
 構成は `docs/`（要件定義書・設計書）、`mock/`（画面モック）、`backend/`（Ruby on Rails、API モード）、`frontend/`（Next.js）、`infra/`（AWS の構成の Terraform とデプロイ用スクリプト）、`compose.yaml`（ローカル開発用の Rails と MySQL）。技術の選定はタスク管理アプリと異なる（[技術スタック](docs/tech-stack.md)）。現時点で存在するのは `docs/` と `mock/` だけで、`backend/`・`frontend/`・`infra/`・`compose.yaml` はこれから作る。
 
-**注意：** 4. 以降のサーバー起動・ポート・品質チェック・デプロイの規則と、`.claude/` のフック・スキルは、まだタスク管理アプリの技術（Spring Boot / Vite / PostgreSQL / ECS）のままである。技術スタックに合わせた書き換えは別の Issue で行う。それまでは、ポートは技術スタック 6.1（Next.js 3000 / Rails 3001 / MySQL 3306）を正とする。
-
 ---
 
 ## 2. 開発フロー（必須・例外なし）
@@ -124,11 +122,13 @@ gh pr merge --squash
 
 | 正しい（Git Bash） | 誤り（PowerShell/cmd） |
 | --- | --- |
-| `./gradlew bootRun` | `.\gradlew bootRun` |
-| `cd backend/src` | `cd backend\src` |
-| `curl http://localhost:8080/api/health` | `curl.exe ...` |
+| `docker compose exec backend bin/rails db:migrate` | `docker compose exec backend bin\rails db:migrate` |
+| `cd frontend/src` | `cd frontend\src` |
+| `curl http://localhost:3001/up` | `curl.exe ...` |
 
 シェルによって内容が変わるコマンドを書くときは、どちらのシェル向けかを明記する。
+
+Ruby は PC に入れず、Rails のコマンド（`bin/rails`、`bin/rubocop`、`bundle` など）は **必ず `docker compose exec backend` を付けてコンテナの中で実行する**（[技術スタック](docs/tech-stack.md) 6.）。
 
 ### Git Bash から `gh api` を使うときの注意
 
@@ -144,19 +144,15 @@ gh api /repos/KeiT0773/InquiryManagement/rulesets  # invalid API endpoint エラ
 ## 4. ローカル環境
 
 ```bash
-# 1. データベース（リポジトリルートで実行）
+# 1. データベースとバックエンド（リポジトリルートで実行。MySQL と Rails のコンテナが起動する）
 docker compose up -d
 
-# 2. バックエンド
-cd backend
-./gradlew bootRun
-
-# 3. フロントエンド（別のターミナルで）
+# 2. フロントエンド（別のターミナルで）
 cd frontend
 npm run dev
 ```
 
-画面は http://localhost:5173 。バックエンドの動作確認は http://localhost:8080/api/health/db 。詳細は [backend/README.md](backend/README.md)、[frontend/README.md](frontend/README.md) を参照。
+画面は http://localhost:3000 。バックエンドの動作確認は http://localhost:3001/up （Rails 標準の死活確認）。詳細は backend/README.md・frontend/README.md（雛形の作成時に作る）を参照。
 
 ---
 
@@ -172,14 +168,14 @@ npm run dev
 
 | サーバー | ポート | 根拠 |
 | --- | --- | --- |
-| バックエンド（Spring Boot） | 8080 | Spring Boot の既定。`application.properties` に `server.port` は書かない |
-| フロントエンド（Vite） | 5173 | `frontend/vite.config.ts` の `server.port: 5173, strictPort: true` |
-| PostgreSQL（Docker） | 5432 | `compose.yaml` |
+| フロントエンド（Next.js） | 3000 | Next.js の既定。`npm run dev` にポートの指定は付けない |
+| バックエンド（Rails） | 3001 | `compose.yaml` で Rails を 3001 で起動する（Rails の既定 3000 は Next.js と重なるため。[技術スタック](docs/tech-stack.md) 6.1） |
+| MySQL（Docker） | 3306 | `compose.yaml` |
 
 ### ポートが使用中のとき
 
-1. そのポートを占有しているプロセスを調べる（`Get-NetTCPConnection -LocalPort 5173 -State Listen` → `Get-CimInstance Win32_Process -Filter "ProcessId=<PID>"`）
-2. このアプリ自身の古いサーバー（node/vite、java/gradle）なら **停止する**。無関係のプロセスなら、何が動いているかをユーザーに伝えてから停止する
+1. そのポートを占有しているプロセスを調べる（`Get-NetTCPConnection -LocalPort 3000 -State Listen` → `Get-CimInstance Win32_Process -Filter "ProcessId=<PID>"`）。3001・3306 が Docker のものなら `docker compose ps` で確かめる
+2. このアプリ自身の古いサーバー（node/next、このリポジトリの Docker Compose のコンテナ）なら **停止する**。無関係のプロセスなら、何が動いているかをユーザーに伝えてから停止する
 3. 既定のポートで起動し直す
 4. ユーザーのターミナルで動いていたサーバーを止めた場合は、止めたことと起動し直す必要があることを必ず伝える
 
@@ -189,25 +185,25 @@ npm run dev
 
 以下は [.claude/hooks/guard-ports.ps1](.claude/hooks/guard-ports.ps1)（PreToolUse フック）が実行前に拒否する。
 
-- `npx vite --port 5174`、`npm run dev -- --port 5175` のように、フロントエンドを 5173 以外で起動する
-- `./gradlew bootRun --args='--server.port=8081'`、`SERVER_PORT=8081 ...` のように、バックエンドを 8080 以外で起動する
+- `npx next dev -p 3002`、`npm run dev -- --port 3002`、`PORT=3002 npm run dev` のように、フロントエンドを 3000 以外で起動する
+- `bin/rails server -p 3002`、`bin/rails s --port=3002`、`PORT=3002 bin/rails s` のように、バックエンドを 3001 以外で起動する
 
-理由：プロキシ設定・README の URL・ユーザーがブラウザで開いているページはすべて既定ポートを前提にしている。別ポートで起動すると、ユーザーが見ているサーバーと Claude が確認したサーバーが別物になり、「Claude の環境では動くのにユーザーの画面では動かない」食い違いが生じる。動作確認のために Claude が立てたサーバーは、確認後に必ず停止する。
+理由：CORS で許可する送信元、README の URL、ユーザーがブラウザで開いているページはすべて既定ポートを前提にしている。別ポートで起動すると、ユーザーが見ているサーバーと Claude が確認したサーバーが別物になり、「Claude の環境では動くのにユーザーの画面では動かない」食い違いが生じる。動作確認のために Claude が立てたサーバーは、確認後に必ず停止する。
 
 ---
 
 ## 7. 品質チェック・レビュー
 
-実装の品質チェックやレビューを行うとき、および PR を作る前のセルフレビューは、スキル `quality-review`（[.claude/skills/quality-review/SKILL.md](.claude/skills/quality-review/SKILL.md)）に従う。機械チェック（`cd frontend && npm run check`、`cd backend && ./gradlew check`）→ 文書との突き合わせ → 標準からのずれ、の順で確認し、文書と実装が食い違っていれば文書を正として実装を直す。
+実装の品質チェックやレビューを行うとき、および PR を作る前のセルフレビューは、スキル `quality-review`（[.claude/skills/quality-review/SKILL.md](.claude/skills/quality-review/SKILL.md)）に従う。機械チェック（`cd frontend && npm run check`、`docker compose exec backend bin/rubocop`・`bin/brakeman`・`bin/rails test`）→ 文書との突き合わせ → 標準からのずれ、の順で確認し、文書と実装が食い違っていれば文書を正として実装を直す。
 
 ---
 
 ## 8. AWS へのデプロイ
 
-AWS への構築・更新・休止・再開と、`infra/` の Terraform・スクリプトの実行は、スキル `deploy-aws`（[.claude/skills/deploy-aws/SKILL.md](.claude/skills/deploy-aws/SKILL.md)）に従う。
+AWS への構築・更新・休止・再開と、`infra/` の Terraform・スクリプトの実行は、スキル `deploy-aws`（[.claude/skills/deploy-aws/SKILL.md](.claude/skills/deploy-aws/SKILL.md)）に従う。具体的な手順はインフラ設計書の作成後にスキルへ書き足す。
 
 - AWS の実物を変える操作は、内容（計画の集計など）を示して利用者の承認を得てから行う。スクリプトの `--yes` は承認後にだけ付ける
-- 撤去（`terraform destroy`、`shutdown.sh`、`aws ... delete-*`）は、消えるものを示し、その会話の中で利用者が明示的に承認してから実行する。前の承認は使い回さず、`-auto-approve` は付けない
+- 撤去（`terraform destroy`、`aws ... delete-*`、`aws ec2 terminate-instances` など）は、消えるものを示し、その会話の中で利用者が明示的に承認してから実行する。前の承認は使い回さず、`-auto-approve` は付けない
 - `~/.aws/credentials` を読まない。アクセスキーを会話に出さない
-- 作業の最後に、稼働中か休止中かを報告する（稼働中は約 $0.07 / 時間かかる。[インフラ設計書](docs/infra-design.md) 11.）
-- リソースの規模は [インフラ設計書](docs/infra-design.md) 2.1 の上限（無料利用枠と同じ規模）を超えない
+- 作業の最後に、稼働中か休止中かを報告する（稼働中の 1 時間あたりの費用はインフラ設計書で見積もる）
+- リソースの規模は、無料利用枠の対象と同じ規模を上限とする（要件定義書 7.「費用」。具体的な上限はインフラ設計書で定める）
