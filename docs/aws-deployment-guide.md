@@ -5,7 +5,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書名 | 問い合わせ管理アプリ AWS デプロイ手順書 |
-| 版数 | 1.0 |
+| 版数 | 1.1 |
 | 作成日 | 2026-11-01 |
 | 最終更新日 | 2026-11-01 |
 | 作成者 | KeiT0773 |
@@ -22,6 +22,7 @@
 | 版数 | 日付 | 変更内容 | 変更者 |
 | --- | --- | --- | --- |
 | 1.0 | 2026-11-01 | 初版作成。`infra/` の Terraform とスクリプトに合わせて、認証設定、state の置き場、構築・更新・休止・再開の手順、トラブルシューティングを定義 | KeiT0773 |
+| 1.1 | 2026-11-01 | アクセス元の制限の撤廃（インフラ設計書 1.3 版）に伴い、2.、3.、6.1 を更新し、6.5（自宅のネットワーク番号が変わったとき）と、9.6 の 403 の対処を削除。9.6 にコンソールで手で削除したあとの構築し直しを追加 | KeiT0773 |
 
 ### 1.2 本書のコマンドについて
 
@@ -70,7 +71,7 @@ Terraform のコード（`infra/terraform/*.tf`）には「あるべき姿」を
 
 #### 2.2.2 変数と terraform.tfvars
 
-環境によって変わる値（イメージのタグ、許可する IPv6 のネットワーク番号など）は、`variables.tf` で変数として宣言し、値を `terraform.tfvars` に書く。`terraform.tfvars` には自宅のネットワーク番号が入るため、Git には含めない（`infra/.gitignore`）。スクリプトが値を自動で書き換えるため、手で書く必要はない。
+環境によって変わる値（イメージのタグ、復元するスナップショットの名前など）は、`variables.tf` で変数として宣言し、値を `terraform.tfvars` に書く。`terraform.tfvars` は環境ごとの値のため、Git には含めない（`infra/.gitignore`）。スクリプトが値を自動で書き換えるため、手で書く必要はない。
 
 #### 2.2.3 state（作ったものの台帳）
 
@@ -90,7 +91,7 @@ Terraform は、自分が作ったリソースの一覧と属性を **state** �
 | セキュリティグループ | リソースごとのファイアウォール | EC2 は CloudFront からの 80 番だけ、RDS は EC2 からの 3306 番だけを受け付ける |
 | EC2 | 仮想サーバー | `t3.micro` 1 台。Docker Compose で web（nginx + 画面）と backend（Rails）を動かす |
 | RDS | AWS が運用するデータベース | MySQL 8.4、`db.t4g.micro` 1 台 |
-| CloudFront | 世界中の拠点から配信する入口（CDN） | HTTPS の入口。CloudFront Functions で、自宅のネットワーク以外からの要求を 403 にする |
+| CloudFront | 世界中の拠点から配信する入口（CDN） | HTTPS の入口。アクセス元の場所は限らない（どこからでも使える） |
 | ECR | Docker イメージの置き場所 | `inquirymanagement-backend`・`inquirymanagement-web` |
 | SSM | サーバーの管理の仕組みの集まり | パラメータストア（秘密情報とイメージのタグ）、Session Manager（EC2 に入る）、Run Command（EC2 でコマンドを実行する） |
 | IAM ロール | AWS のサービスが名乗る身分 | EC2 が ECR・SSM・CloudWatch Logs を使うための権限 |
@@ -108,7 +109,7 @@ flowchart TD
     B --> C["5. state 用 S3 バケットの作成<br/>（AWS CLI。最初の 1 回だけ）"]
     C --> D["6.1 初回の構築<br/>startup.sh"]
     D --> E["動作確認"]
-    E --> F["6.2〜6.5 更新<br/>（コードを変えるたび）"]
+    E --> F["6.2〜6.4 更新<br/>（コードを変えるたび）"]
     E --> G["7.2 休止（すべて撤去）<br/>使い終わったら shutdown.sh"]
     G --> H["7.3 再開（作り直し）<br/>使うとき startup.sh"]
     H --> G
@@ -121,7 +122,7 @@ flowchart TD
 | AWS CLI v2 | `aws --version` | 2.31.38 | AWS をコマンドで操作する |
 | Terraform | `terraform -version` | 1.13.5（1.10 以上が必要） | インフラを構築する |
 | Docker Desktop | `docker --version` | 29.8.0 | backend・web のイメージを作る。**起動しておく** |
-| Node.js / npm | `node --version` | 24 系 | 画面をビルドする。IPv6 のネットワーク番号の計算にも使う |
+| Node.js / npm | `node --version` | 24 系 | 画面をビルドする |
 | Git Bash | — | — | 本書のコマンドを実行する |
 
 ---
@@ -211,7 +212,7 @@ $ aws s3api get-public-access-block --bucket "$STATE_BUCKET"
 
 初回の構築は、再開（7.3）と同じ `startup.sh` で行う。スナップショットが無いため、DB は新しく作られ、問い合わせは空から始まる（3 つのリストは自動で入る）。
 
-**前提**：main を最新にし、コミットしていない変更が無いこと（イメージのタグにコミットのハッシュを使うため）。Docker Desktop が起動していること。自宅の IPv6 のネットワークにつながっていること。
+**前提**：main を最新にし、コミットしていない変更が無いこと（イメージのタグにコミットのハッシュを使うため）。Docker Desktop が起動していること。
 
 ```bash
 $ git switch main && git pull --ff-only
@@ -224,12 +225,11 @@ $ bash infra/scripts/startup.sh
 | --- | --- | --- |
 | 1 | AWS の認証と、state の保存先への接続を確かめる | 数秒 |
 | 2 | 復元するスナップショットを探す（初回は無いので DB を新規作成） | 数秒 |
-| 3 | この PC の IPv6 アドレスから、自宅のネットワーク番号（先頭 64 ビット）を調べて許可リストに書く | 数秒 |
-| 4 | 作られるリソースの件数を表示して、`[y/N]` で確認を求める | — |
-| 5 | ECR（イメージの置き場所）だけを先に作る | 数秒 |
-| 6 | backend（Rails）と web（画面をビルドして nginx に入れたもの）のイメージを作って ECR に登録する | 5〜10 分 |
-| 7 | 残りすべてを作る（VPC、RDS、EC2、CloudFront など）。EC2 は起動時に Docker を入れ、コンテナを起動する。新しい DB には backend がテーブルを作る | 15〜25 分 |
-| 8 | CloudFront の URL で、画面・`/api/lists` が 200 を返すこと、IPv4 からは 403 になることを確かめる | 数分 |
+| 3 | 作られるリソースの件数を表示して、`[y/N]` で確認を求める | — |
+| 4 | ECR（イメージの置き場所）だけを先に作る | 数秒 |
+| 5 | backend（Rails）と web（画面をビルドして nginx に入れたもの）のイメージを作って ECR に登録する | 5〜10 分 |
+| 6 | 残りすべてを作る（VPC、RDS、EC2、CloudFront など）。EC2 は起動時に Docker を入れ、コンテナを起動する。新しい DB には backend がテーブルを作る | 15〜25 分 |
+| 7 | CloudFront の URL で、画面・`/api/lists` が 200 を返すことを確かめる | 数分 |
 
 最後に表示される `URL: https://xxxx.cloudfront.net` をブラウザで開く。**URL は再開のたびに変わる。**
 
@@ -272,16 +272,6 @@ $ terraform -chdir=infra/terraform plan    # 何が変わるかを確かめる
 - 計画に RDS の `-/+`（作り直し）や `-`（削除）が含まれていたら、適用しない。データが消える。
 - `user_data`（`templates/` の 3 つのファイルを含む）を変えると、EC2 が作り直しになる（`aws_instance.app must be replaced`）。EC2 は使い捨て（データは RDS）なので問題ない。CloudFront のオリジンも同時に更新され、URL は変わらない。
 - 適用は、計画を確かめてから `terraform -chdir=infra/terraform apply` で行う。
-
-### 6.5 自宅のネットワーク番号が変わったとき
-
-自宅の IPv6 のネットワーク番号は、ルーターの再起動や回線の契約の変更で変わることがある。変わると、画面も API も 403（「このネットワークからはアクセスできません」）になる。
-
-```bash
-$ bash infra/scripts/update-allowed-ip.sh
-```
-
-今の PC の IPv6 アドレスから新しいネットワーク番号を調べ、CloudFront Functions の許可リストだけを書き換える。CloudFront の全拠点に反映されるまで数分かかる。休止中は不要（再開の `startup.sh` が自動で今の番号を使う）。
 
 ---
 
@@ -433,20 +423,18 @@ tail -n 100 /var/log/cloud-init-output.log   # 初回起動時の設定（user_d
 | --- | --- |
 | `Error acquiring the state lock` | 別のところで Terraform が動いている。終わるのを待つ。途中で強制終了した場合だけ、表示された ID で `terraform -chdir=infra/terraform force-unlock <ID>` |
 | 撤去が途中で失敗した | 数分待ってから、もう一度 `shutdown.sh` を実行する（CloudFront の無効化が終わる前に消そうとした場合など） |
-| `precondition` のエラー（許可リストが空、イメージのタグが空） | スクリプトを使わずに `terraform apply` した。スクリプトから実行する |
+| `precondition` のエラー（イメージのタグが空） | スクリプトを使わずに `terraform apply` した。スクリプトから実行する |
 | `Backend initialization required` | `terraform -chdir=infra/terraform init -reconfigure -backend-config="bucket=inquirymanagement-tfstate-<アカウント ID>"` |
 
-### 9.6 画面や API が 403「このネットワークからはアクセスできません」になる
+### 9.6 コンソールで手で削除したあと、構築し直す
 
-CloudFront Functions が拒否している（[インフラ設計書](infra-design.md) 6.4）。
+Terraform を使わずにコンソールでリソースを消すと、state（台帳）と実物が食い違う。また、消し忘れたリソースが残っていると、同じ名前で作れずに構築が失敗する。構築し直す前に、次を確かめる。
 
-| 原因 | 対処 |
-| --- | --- |
-| 自宅の IPv6 のネットワーク番号が変わった | 6.5 の `update-allowed-ip.sh` |
-| IPv4 で接続している（IPv6 が使えない回線・機器） | IPv4 はすべて拒否する設計。IPv6 で接続できる環境から使う |
-| 自宅以外の場所から使っている | 利用できない（要件定義書 8.） |
-
-今の PC の IPv6 アドレスは `curl -6 https://api6.ipify.org` で確かめられる。
+| 確かめること | コマンド | 対処 |
+| --- | --- | --- |
+| state に記録が残っていないか | `terraform -chdir=infra/terraform state list` | 実物が無いのに記録が残っていれば、`terraform -chdir=infra/terraform plan` で「作り直し」になるか確かめる。記録だけを消す（`terraform state rm`）ときは、消す対象を確かめてから行う |
+| 名前が重なるリソースが残っていないか | `aws iam get-role --role-name inquirymanagement-ec2`、`aws iam get-instance-profile --instance-profile-name inquirymanagement-ec2`、`aws rds describe-db-subnet-groups --db-subnet-group-name inquirymanagement`、`aws ecr describe-repositories`、`MSYS_NO_PATHCONV=1 aws logs describe-log-groups --log-group-name-prefix /inquirymanagement`、`aws ssm describe-parameters` | 残っていれば、コンソールで削除してから `startup.sh` を実行する |
+| 費用がかかるものが残っていないか | `aws cloudfront list-distributions`、`aws rds describe-db-instance-automated-backups` | 無効にしたディストリビューション、残した自動バックアップを削除する |
 
 ---
 
@@ -458,7 +446,6 @@ CloudFront Functions が拒否している（[インフラ設計書](infra-desig
 | 休止 | `bash infra/scripts/shutdown.sh` |
 | バックエンドの更新 | `bash infra/scripts/deploy-backend.sh` |
 | 画面の更新 | `bash infra/scripts/deploy-frontend.sh` |
-| 許可するネットワーク番号の更新 | `bash infra/scripts/update-allowed-ip.sh` |
 | 稼働中か調べる | `terraform -chdir=infra/terraform state list`（何も出なければ休止中） |
 | URL を調べる | `terraform -chdir=infra/terraform output -raw app_url` |
 | ログを見る | `MSYS_NO_PATHCONV=1 aws logs tail /inquirymanagement/backend --since 30m` |

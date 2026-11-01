@@ -7,7 +7,3 @@ web_image_tag     = ""
 
 # DB を復元するスナップショットの名前。空なら DB を新規に作る（例："inquirymanagement-20261101-2130"）
 db_snapshot_identifier = ""
-
-# アクセスを許可する自宅の IPv6 のネットワーク番号（先頭 64 ビット）。インフラ設計書 6.4
-# startup.sh / update-allowed-ip.sh が、その時点の PC の IPv6 アドレスから自動で書く（例：["240d:1a:9e6:8c00::/64"]）
-allowed_viewer_ipv6_prefixes = []
