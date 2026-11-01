@@ -5,7 +5,7 @@
 *.tfstate
 *.tfstate.*
 
-# 実際の入力値（自宅のネットワーク番号を含む）。記入例（.example）だけをコミットする
+# 実際の入力値（イメージのタグなど、環境ごとの値）。記入例（.example）だけをコミットする
 *.tfvars
 !*.tfvars.example
 

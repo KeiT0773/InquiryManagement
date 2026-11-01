@@ -5,7 +5,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書名 | 問い合わせ管理アプリ 技術スタック |
-| 版数 | 1.7 |
+| 版数 | 1.8 |
 | 作成日 | 2026-10-31 |
 | 最終更新日 | 2026-11-01 |
 | 作成者 | KeiT0773 |
@@ -29,6 +29,7 @@
 | 1.5 | 2026-10-31 | バックエンドの雛形の作成に伴い、Ruby（4.0.9）・Rails（8.1.4）・Puma・mysql2・rack-cors・RuboCop・Brakeman の版数を確定し、bundler-audit と `bin/ci` を追記。ローカルの MySQL の版（8.4.13）を追記 | KeiT0773 |
 | 1.6 | 2026-11-01 | フロントエンドの雛形の作成に伴い、Next.js（16.4.3）・React（19.3.0）・TypeScript・ESLint・Prettier・Vitest の版数と、コード検査の構成を確定 | KeiT0773 |
 | 1.7 | 2026-11-01 | AWS の構成（`infra/`）の作成に伴い、9. の nginx（1.28 系）と EC2 上の Docker・Docker Compose（v2.40.3）の版を確定 | KeiT0773 |
+| 1.8 | 2026-11-01 | アクセス元の制限の撤廃（要件定義書 1.6 版）に伴い、8. No.4 を「行わない」に改め、9. から CloudFront Functions を削除 | KeiT0773 |
 
 ---
 
@@ -150,7 +151,7 @@ InquiryManagement/
 | 1 | Next.js の本番での配信の形 | 静的ファイルに書き出し（`output: 'export'`）、EC2 上の nginx で配信する | 画面は 1 ページで、データはすべて API から取るため、Next.js のサーバーを動かす必要が無い。EC2 で動かすプロセスが減り、運用が単純になる |
 | 2 | 開発時のフロントエンドからバックエンドへの接続方式 | Rails 側で CORS を許可する（rack-cors。3.） | No.1 で静的ファイルに書き出すため、Next.js の `rewrites`（転送）は本番で使えない。開発時だけ転送で動くと本番との違いが生まれるため、画面から API を直接呼ぶ形にそろえる |
 | 3 | HTTPS の実現方法 | CloudFront を EC2 の前に置く | 独自ドメインを取得しない（要件定義書 8.）ため、CloudFront に付く `*.cloudfront.net` のドメインと証明書を使う。タスク管理アプリと同じ方法 |
-| 4 | アクセス元の制限の方式 | CloudFront Functions | No.3 で CloudFront を置くため、タスク管理アプリと同じ方法（自宅の IPv6 のネットワーク以外を 403 にする）をそのまま使える |
+| 4 | アクセス元の制限の方式 | 行わない（当初は CloudFront Functions。2026-11-01 に撤廃） | 複数のメンバーが別々の場所から使うアプリであり、構築した環境は動作の確認後すぐに撤去するため（要件定義書 決定事項 No.20） |
 | 5 | EC2 上での Rails の動かし方 | Docker で動かす | ローカル（6.）と同じ Docker イメージを本番でも使い、環境の違いによる不具合を防ぐ。EC2 に Ruby を入れずに済む |
 
 ---
@@ -163,7 +164,7 @@ InquiryManagement/
 flowchart LR
     B([利用者のブラウザ])
     subgraph AWS[AWS 東京リージョン]
-        CF[CloudFront<br>HTTPS・アクセス元の制限]
+        CF[CloudFront<br>HTTPS]
         subgraph EC2[EC2]
             NG[nginx<br>画面の静的ファイル]
             RA[Rails<br>Docker コンテナ]
@@ -183,7 +184,6 @@ flowchart LR
 | --- | --- | --- |
 | クラウド | AWS（東京リージョン `ap-northeast-1`） | タスク管理アプリと同じ。利用者が日本にいる。既存の AWS アカウントと AWS CLI の設定がある |
 | HTTPS・配信の入口 | Amazon CloudFront | 利用者からの要求をすべて受け、HTTPS で通信する（8. No.3）。独自ドメインを取得せず、`*.cloudfront.net` のドメインと証明書を使う |
-| アクセス元の制限 | Amazon CloudFront Functions | 要求ごとに CloudFront で動く短い JavaScript で、アクセス元の IP アドレスが自宅のネットワーク以外なら 403 を返す（要件定義書 7.「アクセス制御」、8. No.4）。タスク管理アプリと同じ方法で、月 200 万回まで無料 |
 | アプリケーションの実行 | Amazon EC2（1 台） | プロジェクト方針として指定。フロントエンド（Next.js）とバックエンド（Rails）を同じサーバーで動かす。タスク管理アプリのサーバーレス構成（S3・Fargate）と違い、OS の管理（更新・プロセスの管理）を自分で行う構成を学ぶ。インスタンスの種類は、無料利用枠の対象と同じ規模（`t4g.micro` / `t3.micro` など）を上限とする（要件定義書 7.「費用」） |
 | データベース | Amazon RDS for MySQL 8.4 系（`db.t4g.micro`） | ローカル（5.）と同じ MySQL 8.4 系。インストール・パッチ・バックアップを AWS に任せる。タスク管理アプリと同じく、無料利用枠の対象と同じ規模を上限とする |
 | Web サーバー | nginx 1.28 系（公式イメージ `nginx:1.28-alpine`） | EC2 上で、Next.js が書き出した画面の静的ファイルを返し、`/api/*` を Rails へ転送する（8. No.1）。nginx も Docker で動かす（[インフラ設計書](infra-design.md) 7.3）。版は構築時（2026-11-01）の安定版の系列 |

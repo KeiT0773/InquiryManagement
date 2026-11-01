@@ -5,7 +5,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書名 | 問い合わせ管理アプリ インフラ設計書 |
-| 版数 | 1.2 |
+| 版数 | 1.3 |
 | 作成日 | 2026-10-31 |
 | 最終更新日 | 2026-11-01 |
 | 作成者 | KeiT0773 |
@@ -15,7 +15,7 @@
 
 本書は、[技術スタック](tech-stack.md) 9. で選んだ AWS のサービスを、**どう組み合わせ、どう設定するか** を定義する。構築・更新・休止・再開の操作手順は [AWS デプロイ手順書](aws-deployment-guide.md) に、Claude が守る約束はスキル `deploy-aws` に書く。
 
-本書は、タスク管理アプリのインフラ設計書の構成と方針（休止は撤去、アクセス元の制限、秘密情報の扱い、Terraform の構成）を踏襲する。サーバーレス構成（S3・ECS on Fargate・ALB）を、EC2 1 台の構成に置き換えたことによる違いは「13. 決定事項」の「タスク管理アプリとの違い」欄に示す。
+本書は、タスク管理アプリのインフラ設計書の構成と方針（休止は撤去、秘密情報の扱い、Terraform の構成）を踏襲する。アクセス元の制限は行わない（6.4）。サーバーレス構成（S3・ECS on Fargate・ALB）を、EC2 1 台の構成に置き換えたことによる違いは「13. 決定事項」の「タスク管理アプリとの違い」欄に示す。
 
 ### 1.1 変更履歴
 
@@ -24,6 +24,7 @@
 | 1.0 | 2026-10-31 | 初版作成。CloudFront + EC2（Docker Compose で nginx と Rails）+ RDS for MySQL の構成、ネットワーク、秘密情報、IAM、費用、Terraform の構成を定義 | KeiT0773 |
 | 1.1 | 2026-10-31 | データ設計書 1.3 版に合わせ、8. の新規作成時のテーブルと `lists` の初期データの作られ方を訂正（マイグレーションではなく `schema.rb` と `db/seeds.rb`） | KeiT0773 |
 | 1.2 | 2026-11-01 | `infra/` の作成に伴い、6.1 に画面の HTML のキャッシュの扱い、7.2 に Docker Compose の入れ方を追記。11.3・14. の予算アラートを「既存のアカウント全体の予算を共有する」に決定し、14. から AWS デプロイ手順書とスキルの行を除外 | KeiT0773 |
+| 1.3 | 2026-11-01 | アクセス元の制限（CloudFront Functions で自宅の IPv6 のネットワークだけを許可）を撤廃。2.、3.、4.、5.1、6.1、6.4、12.、13. No.5、14. を更新 | KeiT0773 |
 
 ---
 
@@ -33,7 +34,7 @@
 | --- | --- | --- |
 | 1 | 構成は「CloudFront（入口）＋ EC2 1 台（画面の配信と API）＋ マネージド DB（RDS）」とする | プロジェクト方針（[技術スタック](tech-stack.md) 2.）。タスク管理アプリのサーバーレス構成と違い、サーバーの OS とプロセスを自分で管理する構成を学ぶ |
 | 2 | 画面と API を **同じドメイン（CloudFront）から配信** する。EC2 上の nginx が画面の静的ファイルを返し、`/api/*` だけを Rails へ転送する | 本番では CORS が不要になる（[API 設計書](api-design.md) 2. 方針 10）。フロントエンドは本番で `/api` を呼ぶ（[フロントエンド設計書](frontend-design.md) 9.） |
-| 3 | 利用者が入れる入口は **CloudFront だけ** にする。EC2 は CloudFront からの通信だけを受け付け、RDS は EC2 からだけ受け付ける。CloudFront で、**利用者の自宅のネットワーク以外からの要求を拒否する**（6.4） | 要件定義書 7.「データ保護」「アクセス制御」。入口を 1 つに絞れば、制限もそこ 1 か所で済む |
+| 3 | 利用者が入れる入口は **CloudFront だけ** にする。EC2 は CloudFront からの通信だけを受け付け、RDS は EC2 からだけ受け付ける。アクセス元の場所（IP アドレス）は限らない（6.4） | 要件定義書 7.「データ保護」「アクセス制御」。入口を 1 つに絞れば、制限もそこ 1 か所で済む |
 | 4 | EC2 は **使い捨て** にする。データはすべて RDS に置き、ログは CloudWatch Logs に送る。EC2 の中で手作業の設定をしない（起動時の設定はすべて Terraform の `user_data` で行う） | EC2 を作り直しても何も失われないようにする。休止・再開（方針 8）や設定の変更のたびに、同じ状態の EC2 を作れる |
 | 5 | EC2 の上では、nginx と Rails を **Docker Compose** で動かす | ローカルと同じ Docker イメージを使い、環境の違いによる不具合を防ぐ（[技術スタック](tech-stack.md) 8. No.5） |
 | 6 | すべてのリソースを Terraform で定義し、コンソールでは変更しない | 構成をコードとして残し、いつでも同じ環境を作り直せるようにする |
@@ -54,7 +55,6 @@
 | パブリック IPv4 アドレス | 1 個（EC2） | 旧来の無料利用枠（月 750 時間）と同じ数 |
 | 秘密情報の保管 | SSM パラメータストアの標準パラメータ（9.） | 常時無料。有料の Secrets Manager は使わない |
 | CloudFront | ディストリビューション 1 つ | 常時無料の範囲（月 1 TB・1,000 万リクエスト）に収まる |
-| CloudFront Functions | 関数 1 つ（アクセス元の制限。6.4） | 常時無料の範囲（月 200 万回）に収まる |
 | CloudWatch Logs | ロググループ 2 つ、保持 7 日 | 常時無料の範囲（月 5 GB）に収まる |
 | ECR | リポジトリ 2 つ（Rails・Web）。古いイメージは自動で消す | 保管量は数百 MB で、休止のたびに消える |
 
@@ -66,10 +66,10 @@
 
 ```mermaid
 flowchart LR
-    U["利用者のブラウザ<br>（自宅のネットワーク）"]
+    U["利用者のブラウザ<br>（場所は問わない）"]
 
     subgraph AWS["AWS 東京リージョン"]
-        CF["CloudFront<br>HTTPS・アクセス元の制限<br>（CloudFront Functions）"]
+        CF["CloudFront<br>HTTPS・キャッシュ"]
 
         subgraph VPC["VPC"]
             subgraph PUB["パブリックサブネット"]
@@ -101,8 +101,8 @@ flowchart LR
 
 | 要求 | 流れ |
 | --- | --- |
-| 画面（`/`、`/_next/...` など） | ブラウザ →（HTTPS）→ CloudFront（アクセス元の判定）→（HTTP）→ EC2 の web コンテナ（nginx が静的ファイルを返す） |
-| API（`/api/*`） | ブラウザ →（HTTPS）→ CloudFront（アクセス元の判定）→（HTTP）→ EC2 の web コンテナ（nginx）→ backend コンテナ（Rails）→ RDS |
+| 画面（`/`、`/_next/...` など） | ブラウザ →（HTTPS）→ CloudFront →（HTTP）→ EC2 の web コンテナ（nginx が静的ファイルを返す） |
+| API（`/api/*`） | ブラウザ →（HTTPS）→ CloudFront →（HTTP）→ EC2 の web コンテナ（nginx）→ backend コンテナ（Rails）→ RDS |
 
 ### 3.3 ローカル環境との対応
 
@@ -119,7 +119,7 @@ flowchart LR
 
 | サービス | 用途 |
 | --- | --- |
-| Amazon CloudFront | 入口。HTTPS、アクセス元の制限（CloudFront Functions）、画面の静的ファイルのキャッシュ |
+| Amazon CloudFront | 入口。HTTPS、画面の静的ファイルのキャッシュ |
 | Amazon EC2 | nginx と Rails を Docker Compose で動かすサーバー 1 台 |
 | Amazon RDS for MySQL | データベース |
 | Amazon VPC | ネットワーク（サブネット、インターネットゲートウェイ、セキュリティグループ） |
@@ -141,7 +141,7 @@ flowchart LR
 | VPC | `10.20.0.0/16` | タスク管理アプリ（同じアカウント）と重ならない範囲にしておく |
 | パブリックサブネット | `10.20.1.0/24`（`ap-northeast-1a`）。インターネットゲートウェイへの経路を持つ | EC2 を置く。EC2 がイメージの取得・OS の更新・SSM との通信のために外へ出られるようにする |
 | プライベートサブネット | `10.20.11.0/24`（`ap-northeast-1a`）、`10.20.12.0/24`（`ap-northeast-1c`）。外への経路を持たない | RDS を置く。RDS のサブネットグループは 2 つ以上の AZ のサブネットを必要とするため 2 つ作る（DB 自体は 1 台） |
-| IPv6 | VPC では使わない | 利用者のブラウザと CloudFront の間は IPv6 で通信する（6.4）が、CloudFront と EC2 の間は IPv4 でよい |
+| IPv6 | VPC では使わない | 利用者のブラウザと CloudFront の間は IPv4・IPv6 のどちらでもよい（6.4）。CloudFront と EC2 の間は IPv4 でよい |
 
 ### 5.2 EC2 をパブリックサブネットに置く理由
 
@@ -175,8 +175,8 @@ EC2 に入る必要があるとき（障害の調査など）は、SSH ではな
 | オリジンに付けるヘッダー | `X-Origin-Verify: <秘密の値>`（6.2） |
 | ビヘイビア `/api/*` | キャッシュしない（マネージドポリシー `CachingDisabled`）。要求のヘッダー・クエリ・body をそのまま転送する（`AllViewerExceptHostHeader`）。許可するメソッドは GET・HEAD・OPTIONS・PUT・POST・PATCH・DELETE |
 | ビヘイビア `*`（既定） | 画面の静的ファイル。キャッシュする（`CachingOptimized`）。許可するメソッドは GET・HEAD |
-| 両方のビヘイビア | ビューワーリクエストに CloudFront Functions（6.4）を付ける。HTTP で来た要求は HTTPS へ転送（`redirect-to-https`） |
-| IPv6 | 有効（`is_ipv6_enabled = true`。6.4） |
+| 両方のビヘイビア | HTTP で来た要求は HTTPS へ転送（`redirect-to-https`）。関数（CloudFront Functions）は付けない（6.4） |
+| IPv6 | 有効（`is_ipv6_enabled = true`。IPv4 と両方で受け付ける。6.4） |
 | 価格クラス | `PriceClass_200`（日本を含む） |
 
 画面を更新したときは、デプロイのスクリプトが CloudFront のキャッシュを無効化する（`/*`）。Next.js が書き出す JavaScript・CSS のファイル名には内容に応じた値が付く（中身が変わればファイル名も変わる）ため、無効化が必要なのは実質 HTML だけである。nginx は `/_next/static/` に長期のキャッシュ（`max-age=31536000, immutable`）を、HTML に `Cache-Control: no-cache` を付けて返す。CloudFront は HTML を毎回確かめるため、無効化しなくても新しい画面が出る（無効化は念のため行う）。
@@ -201,22 +201,18 @@ EC2 に入る必要があるとき（障害の調査など）は、SSH ではな
 
 CloudFront と EC2 の間を暗号化しないことは、タスク管理アプリ（CloudFront と内部 ALB の間は HTTP。ただし VPC の中）と比べて弱くなる点である。独自ドメインを取得すれば HTTPS にできる（14. 保留事項）。
 
-### 6.4 アクセス元の制限（自宅のネットワークだけ）
+### 6.4 アクセス元の制限は行わない
 
-[要件定義書](requirements.md) 7.「アクセス制御」に従い、利用者の自宅のネットワーク以外からの要求を拒否する。**仕組みはタスク管理アプリと同じ** で、関数のコード（`infra/terraform/functions/viewer-allowlist.js`）とその単体テストもタスク管理アプリのものを流用する。
+[要件定義書](requirements.md) 7.「アクセス制御」・決定事項 No.20 に従い、アクセス元の場所（IP アドレス）は限らず、インターネットのどこからでも CloudFront の URL で使えるようにする。
 
 | 項目 | 決定 | 理由 |
 | --- | --- | --- |
-| 判定する場所 | CloudFront（入口）の 2 つのビヘイビア（`*` と `/api/*`）の両方 | 外から入れる入口は CloudFront だけ（6.2）なので、ここで止めれば画面も API も守れる |
-| 方式 | CloudFront Functions（`cloudfront-js-2.0`）のビューワーリクエスト | 月 200 万回まで無料。同じことができる AWS WAF は月 6 ドル前後かかる |
-| 判定に使うアドレス | IPv6 のネットワーク番号（先頭 64 ビット、`/64`） | 後半 64 ビットは PC が自動で変えるが、前半（自宅のネットワークの番号）は変わりにくい |
-| IPv4 | すべて拒否する | IPv4 アドレスは複数の契約者で共有されていることがあり、許可すると他人も入れてしまうおそれがある |
-| 拒否したときの応答 | `403 Forbidden`、本文は短い日本語の説明 | 画面のファイルも API も返さない |
-| 許可リストの置き場所 | Terraform の変数 `allowed_viewer_ipv6_prefixes`（`terraform.tfvars`。Git に入れない） | 関数は外部の設定を読めないため、値をコードに埋め込む |
-| 許可リストの取得 | 再開（`startup.sh`）のたびに、PC の IPv6 アドレスを調べて先頭 64 ビットを書く。稼働中に変わったら `update-allowed-ip.sh` で更新する | タスク管理アプリと同じ |
-| 空の許可リスト | CloudFront を作らずに止める（precondition） | 誰もアクセスできない状態で構築されるのを防ぐ |
+| アクセス元の制限 | 行わない（CloudFront Functions・AWS WAF は使わない） | 複数のメンバーが別々の場所から使うアプリであり、構築した環境は動作の確認後すぐに撤去するため |
+| IPv4・IPv6 | どちらも受け付ける（`is_ipv6_enabled = true`） | 利用者の回線を選ばない |
+| 守るもの | EC2 と RDS を直接呼ばせない構成（6.2、5.3）はそのまま残す | 入口を CloudFront の 1 つに保つ |
+| データ | 認証もアクセス元の制限も無いため、本番の環境には実在する人の個人情報を入れず、動作確認用のサンプルデータだけを入れる | 要件定義書 7.「データ保護」・8. |
 
-チームのメンバーも、自宅のネットワーク（許可したネットワーク）につながった端末からしか利用できない（要件定義書 8.）。メンバーが別の場所から使う必要が出たら、許可リストへの追加か、認証の導入を検討する（14.）。
+当初はタスク管理アプリと同じく、CloudFront Functions で利用者の自宅の IPv6 のネットワーク以外を 403 にしていた（1.2 版まで）。不特定の人に使わせる必要が出たら、認証の導入を検討する（14.）。
 
 ---
 
@@ -353,7 +349,7 @@ flowchart LR
 | EBS | gp3 20 GB | 約 0.002 ドル | 約 2 ドル |
 | パブリック IPv4 | EC2 の 1 個 | 約 0.005 ドル | 約 4 ドル |
 | RDS | `db.t4g.micro` シングル AZ + gp3 20 GB | 約 0.029 ドル | 約 21 ドル |
-| その他 | CloudFront、CloudFront Functions、ECR、SSM パラメータストア、CloudWatch Logs（大半は常時無料の範囲） | — | 約 1 ドル |
+| その他 | CloudFront、ECR、SSM パラメータストア、CloudWatch Logs（大半は常時無料の範囲） | — | 約 1 ドル |
 | **合計** | | **約 0.05 ドル** | **約 38 ドル** |
 
 タスク管理アプリ（約 0.07 ドル / 時間）より安いのは、ロードバランサー（ALB）を使わないためである。例えば、1 日 8 時間 × 月 20 日だけ稼働させる（160 時間）なら、月 8 ドル前後になる。
@@ -395,10 +391,7 @@ InquiryManagement/
     │   │   ├── compose.yaml.tftpl  本番の Docker Compose の定義（7.3）
     │   │   └── start.sh.tftpl      秘密情報の取得とコンテナの起動
     │   ├── logs.tf                 CloudWatch Logs
-    │   ├── cloudfront.tf           CloudFront、アクセス元を制限する関数
-    │   ├── functions/
-    │   │   ├── viewer-allowlist.js        アクセス元の制限（タスク管理アプリから流用。6.4）
-    │   │   └── viewer-allowlist.test.mjs  上の関数の単体テスト（node で実行）
+    │   ├── cloudfront.tf           CloudFront
     │   ├── outputs.tf              URL などの出力値
     │   └── .terraform.lock.hcl     プロバイダーのバージョンの固定（コミットする）
     ├── docker/
@@ -410,7 +403,6 @@ InquiryManagement/
         ├── lib.sh                  各スクリプトが共通で使う関数（確認、init、計画の検査など）
         ├── deploy-backend.sh       backend イメージの作成 → ECR へ登録 → EC2 に反映
         ├── deploy-frontend.sh      画面のビルド → web イメージの作成 → ECR へ登録 → EC2 に反映 → キャッシュの無効化
-        ├── update-allowed-ip.sh    稼働中に自宅のネットワーク番号が変わったとき、許可リストだけを更新
         ├── shutdown.sh             休止：スナップショット → 古いスナップショットの削除 → terraform destroy
         └── startup.sh              再開：最新スナップショットの指定 → ECR → イメージ登録 → terraform apply → 起動の確認
 ```
@@ -435,11 +427,10 @@ InquiryManagement/
 | 安全装置 | 内容 | 対象 |
 | --- | --- | --- |
 | 実行前の確認 | 作成・撤去する件数を表示し、`[y/N]` で確認を求める。`--yes` で省略できる。端末から入力できないときは、確認の手前で止まる | startup・shutdown・deploy-backend・deploy-frontend |
-| 削除・作り直しの検査 | 保存した計画に削除・作り直し（`-/+`）が含まれていれば、適用せずに中止する。ただし EC2 の作り直し（`user_data` の変更による。7.2）は、内容を表示して確認を求めたうえで許可する。**RDS の作り直しは常に中止する** | startup・update-allowed-ip |
+| 削除・作り直しの検査 | 保存した計画に削除・作り直し（`-/+`）が含まれていれば、適用せずに中止する。ただし EC2 の作り直し（`user_data` の変更による。7.2）は、内容を表示して確認を求めたうえで許可する。**RDS の作り直しは常に中止する** | startup |
 | スナップショットの完成の確認 | スナップショットが完成しなければ、何も撤去せずに中止する | shutdown |
 | 未コミットの変更の検査 | `backend/`・`frontend/` にコミットしていない変更があれば、イメージを作らずに中止する（タグと中身を一致させるため） | startup・deploy-backend・deploy-frontend |
 | 起動の確認 | 反映後に SSM Run Command で EC2 の中から `/up` を確かめ、CloudFront の URL で画面と `/api/lists` を確かめる | startup・deploy-backend・deploy-frontend |
-| 許可リストの自動取得 | 再開のたびに、その時点の PC の IPv6 のネットワーク番号を調べて許可リストに書く。IPv6 で通信できなければ中止する | startup・update-allowed-ip |
 | 規模の上限 | `instance_type` は `t3.micro` だけ、`db_instance_class` は `db.t4g.micro` / `db.t3.micro` だけを受け付ける（`variables.tf` の validation） | Terraform |
 | DB の作り直しの防止 | 稼働中に `db_snapshot_identifier` が変わっても、DB を作り直さない（`rds.tf` の `ignore_changes`） | Terraform |
 
@@ -462,7 +453,7 @@ InquiryManagement/
 | 2 | EC2 はパブリックサブネットに置き、パブリック IPv4 を持たせる。NAT Gateway・VPC エンドポイントは使わない | 5.2 | ECS のタスクもパブリック IP を持っていた点は同じ | 2026-10-31 |
 | 3 | EC2 への直接の要求は、セキュリティグループ（CloudFront のプレフィックスリストだけ）と、nginx による秘密のヘッダーの確認の 2 段で拒否する | 6.2 | **異なる**（内部 ALB を VPC オリジンで CloudFront につないでいた） | 2026-10-31 |
 | 4 | CloudFront と EC2 の間は HTTP とする（独自ドメインが無く、オリジン用の正規の証明書を得られないため） | 6.3 | 区間は同じく HTTP だが、VPC の外を通る点が異なる | 2026-10-31 |
-| 5 | アクセス元の制限は CloudFront Functions で行い、関数とテストはタスク管理アプリのものを流用する | 6.4 | 同じ | 2026-10-31 |
+| 5 | アクセス元の制限は行わず、どこからでも使えるようにする（当初の CloudFront Functions による自宅の IPv6 のネットワークだけの許可は撤廃した） | 6.4 | **異なる**（タスク管理アプリは CloudFront Functions で自宅のネットワークだけに限る） | 2026-11-01 |
 | 6 | EC2 は `t3.micro`（x86_64）とし、SSH は開けず SSM Session Manager で入る。キーペアは作らない | 5.3、7.1 | 新規 | 2026-10-31 |
 | 7 | EC2 は使い捨てとし、設定はすべて `user_data` で行う。`user_data` を変えたら EC2 を作り直す | 2.、7.2 | 新規 | 2026-10-31 |
 | 8 | イメージは PC で作り、Git のコミットのハッシュをタグにして ECR に登録する。EC2 への反映は SSM Run Command で行う | 7.4 | ECR とタグは同じ。反映の方法（ECS のサービス更新 → SSM Run Command）が異なる | 2026-10-31 |
@@ -478,5 +469,5 @@ InquiryManagement/
 | 事項 | 扱い | 決定時期 |
 | --- | --- | --- |
 | CloudFront と EC2 の間の HTTPS 化 | 独自ドメインを取得し、ACM の証明書を EC2 側（または前段の仕組み）に置けば可能。要件定義書 8.（独自ドメインは取得しない）の改訂が必要 | 独自ドメインを取得するとき |
-| 自宅以外の場所からの利用（メンバーの外出先など） | 要件定義書 8. のとおり利用できない。必要になったら、許可リストへの追加か認証の導入を検討する | 必要になったとき |
+| 認証（ログイン） | 行わない（要件定義書 決定事項 No.9）。実在する人の個人情報を扱う・長く稼働させるなど、URL を知る人なら誰でも使える状態では困るときに検討する | 必要になったとき |
 | サーバーの監視・自動復旧（CloudWatch のアラーム、EC2 の自動復旧） | 対象外（要件定義書 4.2）。コンテナの自動再起動（`restart: unless-stopped`）だけを行う | 対象にするとき |

@@ -32,22 +32,6 @@ variable "db_snapshot_identifier" {
   default     = ""
 }
 
-variable "allowed_viewer_ipv6_prefixes" {
-  description = "アクセスを許可する IPv6 のネットワーク番号（例：[\"240d:1a:9e6:8c00::/64\"]）。インフラ設計書 6.4"
-  type        = list(string)
-  default     = []
-  # 空のままでは CloudFront を作れない。チェックは cloudfront.tf の precondition で行う
-  # （ECR だけを先に作るとき（-target）には空でよいため、ここでは検証しない）。
-
-  validation {
-    condition = alltrue([
-      for p in var.allowed_viewer_ipv6_prefixes :
-      can(cidrhost(p, 0)) && strcontains(p, ":") && can(regex("/(4[8-9]|5[0-9]|6[0-4])$", p))
-    ])
-    error_message = "allowed_viewer_ipv6_prefixes には、/48〜/64 の IPv6 のネットワーク番号を書いてください（例：240d:1a:9e6:8c00::/64）。IPv4 は使えません。"
-  }
-}
-
 variable "instance_type" {
   description = "EC2 のインスタンスタイプ"
   type        = string

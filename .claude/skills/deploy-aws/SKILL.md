@@ -21,7 +21,7 @@ description: このアプリを AWS に構築・更新・休止・再開する�
 | 作業の最後に「稼働中か休止中か」を報告する。稼働中なら、1 時間あたりの費用（インフラ設計書の見積もり）がかかり続けていることと、休止の方法を伝える | 休止し忘れによる課金を防ぐ |
 | 構成を変えるときは、Issue → ブランチ → PR で `infra/terraform/` を直し、**マージ後の main で** apply する | ブランチのコードで apply すると、AWS の実物が main より先に進んでしまう |
 | リソースの規模を、インフラ設計書 2.1 の上限（`t3.micro`・`db.t4g.micro` など、無料利用枠と同じ規模）より大きくしない | 要件定義書 7.「費用」 |
-| アクセス元の制限（CloudFront Functions）を外したり、IPv4 や自宅以外のネットワークを許可リストに加えたりしない。EC2・RDS をインターネットから直接呼べるようにしない（EC2 のセキュリティグループは CloudFront のプレフィックスリストからの 80 番だけ。SSH の 22 番は開けない。インフラ設計書 5.3・6.2） | 要件定義書 7.「アクセス制御」「データ保護」 |
+| EC2・RDS をインターネットから直接呼べるようにしない（EC2 のセキュリティグループは CloudFront のプレフィックスリストからの 80 番だけ。SSH の 22 番は開けない。インフラ設計書 5.3・6.2）。アプリはアクセス元を限らず、URL を知る人なら誰でも使える（6.4）ため、本番の DB には実在する人の個人情報を入れず、サンプルデータだけを入れる | 要件定義書 7.「アクセス制御」「データ保護」、8. |
 | 金額をこのファイルに書くときは「0.07 ドル」のように書き、ドル記号と数字を続けない | スキルの読み込み時に、ドル記号と数字の組が引数に置き換わってしまうため |
 
 ## 1. いまの状態を調べる（読み取りだけ。承認は不要）
@@ -47,10 +47,9 @@ terraform -chdir=infra/terraform init -reconfigure -backend-config="bucket=inqui
 
 | 利用者の依頼 | スクリプト | 1 回目で示すこと | 実行の前提 |
 | --- | --- | --- | --- |
-| 「構築して」「再開して」 | `bash infra/scripts/startup.sh` | 作る件数（`Plan: N to add`）、復元するスナップショット（無ければ DB を新規作成）、許可するネットワーク番号、費用（約 0.05 ドル / 時間）、20〜30 分かかること | main を最新にし、`backend/`・`frontend/` に未コミットの変更が無い。Docker Desktop が起動している。state 用バケットがある（無ければ手順書 5.。作成は AWS の実物を変えるので承認を得る） |
+| 「構築して」「再開して」 | `bash infra/scripts/startup.sh` | 作る件数（`Plan: N to add`）、復元するスナップショット（無ければ DB を新規作成）、費用（約 0.05 ドル / 時間）、20〜30 分かかること | main を最新にし、`backend/`・`frontend/` に未コミットの変更が無い。Docker Desktop が起動している。state 用バケットがある（無ければ手順書 5.。作成は AWS の実物を変えるので承認を得る） |
 | 「バックエンドを更新して」 | `bash infra/scripts/deploy-backend.sh` | 計画が `aws_ssm_parameter.image_tag["backend-image-tag"]` の更新だけであること、新しいタグ | 稼働中。PR をマージしたあとの main |
 | 「画面を更新して」 | `bash infra/scripts/deploy-frontend.sh` | 計画が `aws_ssm_parameter.image_tag["web-image-tag"]` の更新だけであること、新しいタグ | 同上 |
-| 「自宅のネットワーク番号が変わった」「403 になる」 | `bash infra/scripts/update-allowed-ip.sh` | 新しいネットワーク番号と、計画が `aws_cloudfront_function.viewer_allowlist` の更新だけであること | 稼働中 |
 | 「休止して」「止めて」 | `bash infra/scripts/shutdown.sh` | **3. の手順で**、撤去する件数、スナップショットを取ること、URL が変わること | — |
 | 構成の変更（`infra/terraform/` を直した） | `terraform -chdir=infra/terraform plan` → `apply` | 計画の全体。特に `-/+`・`-` の行 | PR をマージしたあとの main（0.） |
 
@@ -87,15 +86,12 @@ Terraform の外で消すと、state（台帳）には「まだある」と記�
 
 ## 4. 確認（稼働中）
 
-スクリプトは最後に自動で確認する（画面・`/api/lists` が IPv6 で 200、IPv4 からは 403）。手で確かめるときは次のとおり。
+スクリプトは最後に自動で確認する（画面・`/api/lists` が 200）。手で確かめるときは次のとおり。
 
 ```bash
 URL="$(terraform -chdir=infra/terraform output -raw app_url)"
-curl -6 -s -o /dev/null -w '%{http_code}
-' "$URL/"          # 200
-curl -6 -s "$URL/api/lists"                                   # 3 つのリストの JSON
-curl -4 -s -o /dev/null -w '%{http_code}
-' "$URL/"          # 403（IPv4 は拒否）
+curl -s -o /dev/null -w '%{http_code}\n' "$URL/"             # 200
+curl -s "$URL/api/lists"                                      # 3 つのリストの JSON
 MSYS_NO_PATHCONV=1 aws logs tail /inquirymanagement/backend --since 30m   # Rails のログ
 MSYS_NO_PATHCONV=1 aws logs tail /inquirymanagement/web --since 30m       # nginx のログ
 ```

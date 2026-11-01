@@ -111,33 +111,6 @@ set_tfvar() {
   set_tfvar_raw "$1" "\"$2\""
 }
 
-# --- アクセス元の制限（インフラ設計書 6.4） -----------------------------------------
-# この PC の IPv6 アドレスを外部のサービスで調べ、先頭 64 ビット（自宅のネットワーク番号）を
-# "xxxx:xxxx:xxxx:xxxx::/64" の形で出力する。IPv6 で通信できなければ中止する。
-detect_ipv6_prefix() {
-  local addr
-  addr="$(curl -s -6 -m 10 https://api6.ipify.org)" || true
-  [ -n "${addr}" ] || die "IPv6 で通信できません。アプリは自宅の IPv6 のネットワークからだけ使えるため、IPv6 の接続を確かめてください（手順書 9.6）。"
-  # :: の省略を展開し、先頭 4 つの区切りを取り出す（node は画面のビルドで使うため、必ず入っている）
-  node -e '
-    const a = process.argv[1];
-    const [h, t] = a.split("::");
-    const head = h ? h.split(":") : [];
-    const tail = t ? t.split(":") : [];
-    const parts = a.includes("::") ? [...head, ...Array(8 - head.length - tail.length).fill("0"), ...tail] : head;
-    if (parts.length !== 8 || !parts.every((p) => /^[0-9a-f]{1,4}$/i.test(p))) process.exit(1);
-    console.log(parts.slice(0, 4).map((p) => parseInt(p, 16).toString(16)).join(":") + "::/64");
-  ' "${addr}" || die "IPv6 アドレスとして読めない値が返りました: ${addr}"
-}
-
-# 自宅のネットワーク番号を調べて、terraform.tfvars の許可リストに書く
-configure_allowlist() {
-  step "この PC の IPv6 のネットワーク番号を調べる（アクセスを許可する範囲）"
-  ALLOWED_PREFIX="$(detect_ipv6_prefix)"
-  info "許可するネットワーク: ${ALLOWED_PREFIX}（このネットワークにつながった端末からだけ使える）"
-  set_tfvar_raw allowed_viewer_ipv6_prefixes "[\"${ALLOWED_PREFIX}\"]"
-}
-
 # --- 計画の検査（12.3） -------------------------------------------------------------
 # 保存した計画（tfplan）の集計を表示する
 show_plan_summary() {
@@ -236,26 +209,15 @@ run_start_on_ec2() {
   [ "${status}" = Success ] || die "EC2 での入れ替えが ${status} で終わりました。上の出力と、手順書 9.1 のログを確認してください。"
 }
 
-# CloudFront の URL で画面と API を確かめる（12.3）。IPv4 からは 403 になることも確かめる（6.4）
+# CloudFront の URL で画面と API を確かめる（12.3）
 verify_app() {
   local url
   url="$(tf output -raw app_url)"
   step "動作確認（${url}）"
-  curl -6 -fsS -o /dev/null --retry 40 --retry-delay 15 --retry-all-errors "${url}/" \
-    || die "画面が応答しません。手順書 9.2 を確認してください。"
+  curl -fsS -o /dev/null -m 20 --retry 40 --retry-delay 15 --retry-all-errors "${url}/"     || die "画面が応答しません。手順書 9.2 を確認してください。"
   info "画面：200"
-  curl -6 -fsS --retry 20 --retry-delay 15 --retry-all-errors "${url}/api/lists" >/dev/null \
-    || die "API が応答しません。手順書 9.2 を確認してください。"
+  curl -fsS -o /dev/null -m 20 --retry 20 --retry-delay 15 --retry-all-errors "${url}/api/lists"     || die "API が応答しません。手順書 9.2 を確認してください。"
   info "API（/api/lists）：200"
-  local v4
-  v4="$(curl -4 -s -o /dev/null -w '%{http_code}' -m 15 "${url}/" || true)"
-  if [ "${v4}" = 403 ]; then
-    info "IPv4 からのアクセス：403（拒否されている）"
-  elif [ "${v4}" = 000 ]; then
-    info "IPv4 からのアクセス：この PC から IPv4 で接続できないため、確認を省略"
-  else
-    die "IPv4 からのアクセスが ${v4} になりました（403 のはず）。アクセス元の制限を確認してください（手順書 9.6）。"
-  fi
 }
 
 invalidate_cache() {

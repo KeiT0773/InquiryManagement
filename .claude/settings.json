@@ -63,7 +63,6 @@
       "Bash(bash infra/scripts/shutdown.sh*)",
       "Bash(bash infra/scripts/deploy-backend.sh*)",
       "Bash(bash infra/scripts/deploy-frontend.sh*)",
-      "Bash(bash infra/scripts/update-allowed-ip.sh*)",
       "Bash(aws * create-*)",
       "Bash(aws * delete-*)",
       "Bash(aws * put-*)",
